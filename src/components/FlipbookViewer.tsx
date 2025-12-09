@@ -46,11 +46,20 @@ const FlipbookViewer = ({ pages }: FlipbookViewerProps) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [dimensions, setDimensions] = useState({ width: 400, height: 550 });
   const [flippingTime, setFlippingTime] = useState(600);
-  const [enableRolling, setEnableRolling] = useState(true);
+  // disable rolling animation by default
+  const [enableRolling, setEnableRolling] = useState(false);
   const [enableSound, setEnableSound] = useState(true);
+  const [userMeta, setUserMeta] = useState<{name?:string,email?:string,location?:string,company?:string} | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
+    // load prefills / metadata from localStorage to show inside cover
+    try {
+      const raw = localStorage.getItem('flipper_user');
+      if (raw) setUserMeta(JSON.parse(raw));
+    } catch {}
+
     const updateDimensions = () => {
       const container = containerRef.current;
       if (container) {
@@ -75,6 +84,14 @@ const FlipbookViewer = ({ pages }: FlipbookViewerProps) => {
     window.addEventListener('resize', updateDimensions);
     return () => window.removeEventListener('resize', updateDimensions);
   }, [isFullscreen]);
+
+  useEffect(() => {
+    // reload metadata when component mounts (in case user edited earlier)
+    try {
+      const raw = localStorage.getItem('flipper_user');
+      if (raw) setUserMeta(JSON.parse(raw));
+    } catch {}
+  }, []);
 
   const handlePageFlip = (e: any) => {
     const newPage = e.data;
@@ -121,26 +138,9 @@ const FlipbookViewer = ({ pages }: FlipbookViewerProps) => {
     }
   };
 
-  const triggerRollingAnimation = (direction: 'left' | 'right') => {
-    const el = containerRef.current;
-    if (!el) return;
-    // prevent spamming animation
-    if (animatingRef.current) return;
-    animatingRef.current = true;
-
-    // set animation duration to match flippingTime
-    try {
-      el.style.setProperty('--roll-duration', `${flippingTime}ms`);
-    } catch {}
-
-    const cls = direction === 'right' ? 'page-rolling-right' : 'page-rolling-left';
-    el.classList.add(cls);
-    if (rollingTimeoutRef.current) window.clearTimeout(rollingTimeoutRef.current as any);
-    rollingTimeoutRef.current = window.setTimeout(() => {
-      el.classList.remove(cls);
-      rollingTimeoutRef.current = null;
-      animatingRef.current = false;
-    }, flippingTime + 120);
+  const triggerRollingAnimation = (_direction: 'left' | 'right') => {
+    // Rolling animation disabled — no-op to avoid adding classes/CSS animations.
+    return;
   };
 
   // Ensure AudioContext exists (created lazily). Many browsers require user gesture to resume.
@@ -174,6 +174,29 @@ const FlipbookViewer = ({ pages }: FlipbookViewerProps) => {
   }, []);
 
   const playPaperSound = async () => {
+    // Try recorded audio first (public/paper-flip.mp3). If missing or playback fails, fallback to synth.
+    try {
+      if (!audioRef.current) {
+        audioRef.current = new Audio('/paper-flip.mp3');
+        audioRef.current.preload = 'auto';
+      }
+      const audio = audioRef.current;
+      if (audio) {
+        // ensure AudioContext unlocked
+        ensureAudioContext();
+        try {
+          try { audio.currentTime = 0; } catch {}
+          await audio.play();
+          return;
+        } catch (err) {
+          // recorded playback failed, fallback to synth
+        }
+      }
+    } catch (err) {
+      // ignore and fallback
+    }
+
+    // Synth fallback
     try {
       ensureAudioContext();
       const ctx = audioCtxRef.current;
@@ -217,49 +240,97 @@ const FlipbookViewer = ({ pages }: FlipbookViewerProps) => {
   }, []);
 
   const handleExport = () => {
-    // Generate a multi-page PDF from all page images using jspdf
-    (async () => {
-      try {
-        const { jsPDF } = await import('jspdf');
-        const pdf = new jsPDF({ unit: 'pt', format: 'a4' });
+    exportFlipbook(false).catch((err)=> console.error('Export failed', err));
+  };
 
-        for (let i = 0; i < pages.length; i++) {
-          const imgSrc = pages[i];
-          // load image
-          const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-            const image = new Image();
-            // attempt to handle cross-origin images
-            image.crossOrigin = 'anonymous';
-            image.onload = () => resolve(image);
-            image.onerror = (e) => reject(e);
-            image.src = imgSrc;
-          });
+  // Export flipbook; if returnBlob === true, return a Blob instead of prompting download
+  const exportFlipbook = async (returnBlob = false) => {
+    const { jsPDF } = await import('jspdf');
+    const pdf = new jsPDF({ unit: 'pt', format: 'a4' });
 
-          // Fit image to page while preserving aspect ratio
-          const pageWidth = pdf.internal.pageSize.getWidth();
-          const pageHeight = pdf.internal.pageSize.getHeight();
-          const ratio = Math.min(pageWidth / img.width, pageHeight / img.height);
-          const imgWidth = img.width * ratio;
-          const imgHeight = img.height * ratio;
-          const x = (pageWidth - imgWidth) / 2;
-          const y = (pageHeight - imgHeight) / 2;
+    const drawImageOnPdf = async (imgSrc: string) => {
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const image = new Image();
+        image.crossOrigin = 'anonymous';
+        image.onload = () => resolve(image);
+        image.onerror = (e) => reject(e);
+        image.src = imgSrc;
+      });
 
-          // draw image
-          pdf.addImage(img, 'JPEG', x, y, imgWidth, imgHeight);
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const ratio = Math.min(pageWidth / img.width, pageHeight / img.height);
+      const imgWidth = img.width * ratio;
+      const imgHeight = img.height * ratio;
+      const x = (pageWidth - imgWidth) / 2;
+      const y = (pageHeight - imgHeight) / 2;
+      pdf.addImage(img, 'JPEG', x, y, imgWidth, imgHeight);
+    };
 
-          if (i < pages.length - 1) pdf.addPage();
-        }
-
-        pdf.save('flipbook.pdf');
-      } catch (err) {
-        console.error('Export failed', err);
-        // Fallback: download first image if PDF generation fails
-        const link = document.createElement('a');
-        link.href = pages[0];
-        link.download = 'flipbook-page.png';
-        link.click();
+    // first cover (logo/title)
+    try {
+      const logoSrc = '/Logo.png';
+      // draw a simple cover page with logo and user metadata
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      pdf.setFontSize(28);
+      pdf.text('Flipper', pageWidth / 2, 120, { align: 'center' });
+      try { await drawImageOnPdf(logoSrc); } catch {}
+      if (userMeta?.name) {
+        pdf.setFontSize(14);
+        pdf.text(`Owner: ${userMeta.name}`, pageWidth / 2, pageWidth - 80, { align: 'center' });
       }
-    })();
+    } catch {}
+
+    for (let i = 0; i < pages.length; i++) {
+      if (i > 0) pdf.addPage();
+      try { await drawImageOnPdf(pages[i]); } catch (e) { console.warn('Image draw failed', e); }
+    }
+
+    // last page thank you
+    pdf.addPage();
+    try {
+      const logoSrc = '/Logo.png';
+      await drawImageOnPdf(logoSrc);
+    } catch {}
+    pdf.setFontSize(20);
+    pdf.text('Thank you for using Flipper', pdf.internal.pageSize.getWidth() / 2, 160, { align: 'center' });
+    pdf.setFontSize(12);
+    pdf.text('Share your flipbook with others!', pdf.internal.pageSize.getWidth() / 2, 190, { align: 'center' });
+
+    if (returnBlob) {
+      const blob = pdf.output('blob');
+      return blob;
+    }
+
+    pdf.save('flipbook.pdf');
+    return null;
+  };
+
+  const handleShare = async () => {
+    try {
+      const blob = await exportFlipbook(true);
+      if (!blob) return;
+      const file = new File([blob], 'flipbook.pdf', { type: 'application/pdf' });
+      // Web Share API with files
+      if ((navigator as any).canShare && (navigator as any).canShare({ files: [file] })) {
+        try {
+          await (navigator as any).share({ files: [file], title: 'My Flipbook', text: 'Check out my flipbook' });
+          return;
+        } catch (err) {
+          console.warn('Share failed', err);
+        }
+      }
+
+      // fallback: prompt download
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'flipbook.pdf';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Share failed', err);
+    }
   };
 
   return (
@@ -301,12 +372,26 @@ const FlipbookViewer = ({ pages }: FlipbookViewerProps) => {
               <span className="text-xs text-muted-foreground min-w-[3rem] text-center">{flippingTime}ms</span>
             </div>
             <div className="flex items-center gap-2 ml-4">
-              <label className="text-sm text-muted-foreground">Rolling</label>
-              <input type="checkbox" checked={enableRolling} onChange={(e) => setEnableRolling(e.target.checked)} />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setEnableRolling(prev => !prev)}
+                aria-pressed={enableRolling}
+                className="px-2"
+              >
+                {enableRolling ? 'Rolling: On' : 'Rolling: Off'}
+              </Button>
             </div>
             <div className="flex items-center gap-2 ml-2">
-              <label className="text-sm text-muted-foreground">Sound</label>
-              <input type="checkbox" checked={enableSound} onChange={(e) => setEnableSound(e.target.checked)} />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setEnableSound(prev => !prev)}
+                aria-pressed={enableSound}
+                className="px-2"
+              >
+                {enableSound ? 'Sound: On' : 'Sound: Off'}
+              </Button>
             </div>
           <span className="text-sm text-muted-foreground min-w-[3rem] text-center">
             {Math.round(zoom * 100)}%
@@ -380,36 +465,29 @@ const FlipbookViewer = ({ pages }: FlipbookViewerProps) => {
             clickEventForward={true}
             useMouseEvents={true}
           >
+            {/* First cover */}
+            <Page pageNumber={0}>
+              <div className="w-full h-full flex flex-col items-center justify-center">
+                <img src="/Logo.png" alt="Logo" className="w-32 h-32 object-contain mb-4" />
+                <h2 className="text-2xl font-serif">Flipper</h2>
+                {userMeta?.name && <p className="mt-4 text-sm">Created by {userMeta.name}</p>}
+              </div>
+            </Page>
+
             {pages.map((page, index) => (
               <Page key={index} pageNumber={index + 1} imageSrc={page} />
             ))}
+
+            {/* Last cover / thank you */}
+            <Page pageNumber={pages.length + 1}>
+              <div className="w-full h-full flex flex-col items-center justify-center">
+                <h3 className="text-xl font-semibold">Thank you</h3>
+                <p className="text-sm mt-2">We hope you enjoyed your flipbook.</p>
+                <img src="/Logo.png" alt="Logo" className="w-20 h-20 object-contain mt-6" />
+              </div>
+            </Page>
           </HTMLFlipBook>
         </div>
-
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={goToNextPage}
-          disabled={currentPage >= totalPages - 1}
-          className="ml-4 h-12 w-12 rounded-full bg-secondary/80 hover:bg-secondary disabled:opacity-30"
-        >
-          <ChevronRight className="w-6 h-6" />
-        </Button>
-      </div>
-
-      {/* Page Indicator */}
-      <div className="flex items-center gap-1 mt-6">
-        {Array.from({ length: Math.min(totalPages, 10) }, (_, i) => (
-          <div
-            key={i}
-            className={cn(
-              "w-2 h-2 rounded-full transition-all duration-300",
-              i === currentPage 
-                ? "bg-primary w-6" 
-                : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
-            )}
-          />
-        ))}
         {totalPages > 10 && (
           <span className="text-xs text-muted-foreground ml-2">+{totalPages - 10} more</span>
         )}
