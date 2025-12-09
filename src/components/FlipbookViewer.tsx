@@ -109,11 +109,49 @@ const FlipbookViewer = ({ pages }: FlipbookViewerProps) => {
   }, []);
 
   const handleExport = () => {
-    // Create a simple export simulation
-    const link = document.createElement('a');
-    link.href = pages[0];
-    link.download = 'flipbook-page.png';
-    link.click();
+    // Generate a multi-page PDF from all page images using jspdf
+    (async () => {
+      try {
+        const { jsPDF } = await import('jspdf');
+        const pdf = new jsPDF({ unit: 'pt', format: 'a4' });
+
+        for (let i = 0; i < pages.length; i++) {
+          const imgSrc = pages[i];
+          // load image
+          const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+            const image = new Image();
+            // attempt to handle cross-origin images
+            image.crossOrigin = 'anonymous';
+            image.onload = () => resolve(image);
+            image.onerror = (e) => reject(e);
+            image.src = imgSrc;
+          });
+
+          // Fit image to page while preserving aspect ratio
+          const pageWidth = pdf.internal.pageSize.getWidth();
+          const pageHeight = pdf.internal.pageSize.getHeight();
+          const ratio = Math.min(pageWidth / img.width, pageHeight / img.height);
+          const imgWidth = img.width * ratio;
+          const imgHeight = img.height * ratio;
+          const x = (pageWidth - imgWidth) / 2;
+          const y = (pageHeight - imgHeight) / 2;
+
+          // draw image
+          pdf.addImage(img, 'JPEG', x, y, imgWidth, imgHeight);
+
+          if (i < pages.length - 1) pdf.addPage();
+        }
+
+        pdf.save('flipbook.pdf');
+      } catch (err) {
+        console.error('Export failed', err);
+        // Fallback: download first image if PDF generation fails
+        const link = document.createElement('a');
+        link.href = pages[0];
+        link.download = 'flipbook-page.png';
+        link.click();
+      }
+    })();
   };
 
   return (
