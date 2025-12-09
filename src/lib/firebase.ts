@@ -6,6 +6,7 @@ import {
 	set,
 	get,
 	child,
+    remove,
 } from 'firebase/database';
 
 const firebaseConfig = {
@@ -34,5 +35,11 @@ export async function fetchSubmissions() {
 	const snap = await get(child(dbRef, 'submissions'));
 	if (!snap.exists()) return {};
 	return snap.val();
+}
+
+export async function deleteSubmission(id: string) {
+    if (!id) throw new Error('Invalid id');
+    const itemRef = ref(db, `submissions/${id}`);
+    await remove(itemRef);
 }
 
