@@ -38,6 +38,8 @@ const FlipbookViewer = ({ pages }: FlipbookViewerProps) => {
   const flipBookRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const rollingTimeoutRef = useRef<number | null>(null);
+  const prevPageRef = useRef<number>(0);
+  const animatingRef = useRef(false);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(pages.length);
   const [zoom, setZoom] = useState(1);
@@ -75,19 +77,29 @@ const FlipbookViewer = ({ pages }: FlipbookViewerProps) => {
   }, [isFullscreen]);
 
   const handlePageFlip = (e: any) => {
-    setCurrentPage(e.data);
+    const newPage = e.data;
+    const prev = prevPageRef.current;
+    const direction = newPage > prev ? 'right' : 'left';
+    prevPageRef.current = newPage;
+    setCurrentPage(newPage);
     // play sound and animate rolling when a flip completes
     if (enableSound) playPaperSound();
     if (enableRolling) {
-      triggerRollingAnimation();
+      triggerRollingAnimation(direction);
     }
   };
 
   const goToPrevPage = () => {
+    // trigger human flip animation for left direction, then flip
+    if (enableRolling) triggerRollingAnimation('left');
+    if (enableSound) playPaperSound();
     flipBookRef.current?.pageFlip()?.flipPrev();
   };
 
   const goToNextPage = () => {
+    // trigger human flip animation for right direction, then flip
+    if (enableRolling) triggerRollingAnimation('right');
+    if (enableSound) playPaperSound();
     flipBookRef.current?.pageFlip()?.flipNext();
   };
 
@@ -109,16 +121,26 @@ const FlipbookViewer = ({ pages }: FlipbookViewerProps) => {
     }
   };
 
-  const triggerRollingAnimation = () => {
+  const triggerRollingAnimation = (direction: 'left' | 'right') => {
     const el = containerRef.current;
     if (!el) return;
-    // add class to container to animate pages
-    el.classList.add('page-rolling');
-    if (rollingTimeoutRef.current) window.clearTimeout(rollingTimeoutRef.current);
+    // prevent spamming animation
+    if (animatingRef.current) return;
+    animatingRef.current = true;
+
+    // set animation duration to match flippingTime
+    try {
+      el.style.setProperty('--roll-duration', `${flippingTime}ms`);
+    } catch {}
+
+    const cls = direction === 'right' ? 'page-rolling-right' : 'page-rolling-left';
+    el.classList.add(cls);
+    if (rollingTimeoutRef.current) window.clearTimeout(rollingTimeoutRef.current as any);
     rollingTimeoutRef.current = window.setTimeout(() => {
-      el.classList.remove('page-rolling');
+      el.classList.remove(cls);
       rollingTimeoutRef.current = null;
-    }, flippingTime + 100);
+      animatingRef.current = false;
+    }, flippingTime + 120);
   };
 
   // Ensure AudioContext exists (created lazily). Many browsers require user gesture to resume.
