@@ -3,6 +3,7 @@ import { Book, Sparkles, ArrowRight, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import FileUpload from '@/components/FileUpload';
 import FlipbookViewer from '@/components/FlipbookViewer';
+import MetadataForm from '@/components/MetadataForm';
 import { processFiles, ProcessingProgress } from '@/lib/pdfProcessor';
 import { toast } from 'sonner';
 
@@ -12,6 +13,7 @@ const Index = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState<ProcessingProgress | null>(null);
   const [showFlipbook, setShowFlipbook] = useState(false);
+  const [showMetadataDialog, setShowMetadataDialog] = useState(false);
 
   const handleFilesSelected = useCallback((newFiles: File[]) => {
     setFiles(prev => [...prev, ...newFiles]);
@@ -41,8 +43,9 @@ const Index = () => {
       }
 
       setPages(generatedPages);
-      setShowFlipbook(true);
-      toast.success(`Flipbook created with ${generatedPages.length} pages!`);
+      // open metadata collection dialog before showing flipbook
+      setShowMetadataDialog(true);
+      toast.success(`Flipbook created with ${generatedPages.length} pages! Please provide a few details.`);
     } catch (error) {
       console.error('Error processing files:', error);
       toast.error('Failed to process files. Please try again.');
@@ -79,7 +82,7 @@ const Index = () => {
       </header>
 
       <main className="container mx-auto px-4 py-12">
-        {!showFlipbook ? (
+        {pages.length === 0 ? (
           <div className="max-w-3xl mx-auto">
             {/* Hero Section */}
             <div className="text-center mb-12 animate-fade-up">
@@ -161,7 +164,15 @@ const Index = () => {
             </div>
           </div>
         ) : (
-          <FlipbookViewer pages={pages} />
+          <>
+            <FlipbookViewer pages={pages} />
+            <MetadataForm
+              open={showMetadataDialog}
+              pagesCount={pages.length}
+              onClose={() => setShowMetadataDialog(false)}
+              onSaved={() => setShowFlipbook(true)}
+            />
+          </>
         )}
       </main>
 
