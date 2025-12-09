@@ -37,11 +37,16 @@ Page.displayName = 'Page';
 const FlipbookViewer = ({ pages }: FlipbookViewerProps) => {
   const flipBookRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const rollingTimeoutRef = useRef<number | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(pages.length);
   const [zoom, setZoom] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [dimensions, setDimensions] = useState({ width: 400, height: 550 });
+  const [flippingTime, setFlippingTime] = useState(600);
+  const [enableRolling, setEnableRolling] = useState(true);
+  const [enableSound, setEnableSound] = useState(true);
+  const audioCtxRef = useRef<AudioContext | null>(null);
 
   useEffect(() => {
     const updateDimensions = () => {
@@ -71,6 +76,11 @@ const FlipbookViewer = ({ pages }: FlipbookViewerProps) => {
 
   const handlePageFlip = (e: any) => {
     setCurrentPage(e.data);
+    // play sound and animate rolling when a flip completes
+    if (enableSound) playPaperSound();
+    if (enableRolling) {
+      triggerRollingAnimation();
+    }
   };
 
   const goToPrevPage = () => {
@@ -96,6 +106,82 @@ const FlipbookViewer = ({ pages }: FlipbookViewerProps) => {
     } else {
       document.exitFullscreen();
       setIsFullscreen(false);
+    }
+  };
+
+  const triggerRollingAnimation = () => {
+    const el = containerRef.current;
+    if (!el) return;
+    // add class to container to animate pages
+    el.classList.add('page-rolling');
+    if (rollingTimeoutRef.current) window.clearTimeout(rollingTimeoutRef.current);
+    rollingTimeoutRef.current = window.setTimeout(() => {
+      el.classList.remove('page-rolling');
+      rollingTimeoutRef.current = null;
+    }, flippingTime + 100);
+  };
+
+  // Ensure AudioContext exists (created lazily). Many browsers require user gesture to resume.
+  const ensureAudioContext = () => {
+    if (!audioCtxRef.current) {
+      try {
+        audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      } catch (err) {
+        console.error('Unable to create AudioContext', err);
+      }
+    }
+  };
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const unlock = () => {
+      ensureAudioContext();
+      const ctx = audioCtxRef.current;
+      if (ctx && ctx.state === 'suspended') {
+        ctx.resume().catch(() => {});
+      }
+      // remove this listener after first interaction
+      el.removeEventListener('pointerdown', unlock);
+    };
+
+    // Attach pointerdown to unlock audio on first user gesture
+    el.addEventListener('pointerdown', unlock, { once: true });
+    return () => el.removeEventListener('pointerdown', unlock);
+  }, []);
+
+  const playPaperSound = async () => {
+    try {
+      ensureAudioContext();
+      const ctx = audioCtxRef.current;
+      if (!ctx) return;
+      if (ctx.state === 'suspended') {
+        await ctx.resume();
+      }
+
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      const b = ctx.createBiquadFilter();
+
+      o.type = 'triangle';
+      o.frequency.value = 400;
+      b.type = 'highpass';
+      b.frequency.value = 400;
+
+      o.connect(b);
+      b.connect(g);
+      g.connect(ctx.destination);
+
+      const now = ctx.currentTime;
+      g.gain.setValueAtTime(0, now);
+      g.gain.linearRampToValueAtTime(0.9, now + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+
+      o.start(now);
+      o.stop(now + 0.65);
+    } catch (err) {
+      console.error('Audio error', err);
     }
   };
 
@@ -170,7 +256,7 @@ const FlipbookViewer = ({ pages }: FlipbookViewerProps) => {
           </span>
         </div>
         
-        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
           <Button 
             variant="icon" 
             size="icon"
@@ -179,6 +265,27 @@ const FlipbookViewer = ({ pages }: FlipbookViewerProps) => {
           >
             <ZoomOut className="w-4 h-4" />
           </Button>
+            <div className="flex items-center gap-2 ml-2">
+              <label className="text-xs text-muted-foreground">Flip speed</label>
+              <input
+                type="range"
+                min={200}
+                max={1500}
+                step={50}
+                value={flippingTime}
+                onChange={(e) => setFlippingTime(Number(e.target.value))}
+                className="w-40"
+              />
+              <span className="text-xs text-muted-foreground min-w-[3rem] text-center">{flippingTime}ms</span>
+            </div>
+            <div className="flex items-center gap-2 ml-4">
+              <label className="text-sm text-muted-foreground">Rolling</label>
+              <input type="checkbox" checked={enableRolling} onChange={(e) => setEnableRolling(e.target.checked)} />
+            </div>
+            <div className="flex items-center gap-2 ml-2">
+              <label className="text-sm text-muted-foreground">Sound</label>
+              <input type="checkbox" checked={enableSound} onChange={(e) => setEnableSound(e.target.checked)} />
+            </div>
           <span className="text-sm text-muted-foreground min-w-[3rem] text-center">
             {Math.round(zoom * 100)}%
           </span>
@@ -240,7 +347,7 @@ const FlipbookViewer = ({ pages }: FlipbookViewerProps) => {
             style={{}}
             startPage={0}
             drawShadow={true}
-            flippingTime={600}
+            flippingTime={flippingTime}
             usePortrait={false}
             startZIndex={0}
             autoSize={true}

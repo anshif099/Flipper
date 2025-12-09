@@ -175,6 +175,30 @@
   background: hsl(var(--page-cream)) !important;
 }
 
+  /* Rolling animation applied during page flips */
+  .page-rolling .page-paper {
+    animation: pageRoll 0.8s ease-out forwards;
+  }
+
+  @keyframes pageRoll {
+    0% {
+      transform: rotateY(0deg) translateZ(0) translateX(0) skewX(0deg);
+      box-shadow: var(--shadow-page);
+    }
+    30% {
+      transform: rotateY(-10deg) translateZ(10px) translateX(-6px) skewX(-2deg);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    }
+    60% {
+      transform: rotateY(8deg) translateZ(6px) translateX(6px) skewX(1deg);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+    }
+    100% {
+      transform: rotateY(0deg) translateZ(0) translateX(0) skewX(0deg);
+      box-shadow: var(--shadow-page);
+    }
+  }
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
