@@ -1,13 +1,17 @@
 import { useRef, useState, useEffect, forwardRef } from 'react';
 import HTMLFlipBook from 'react-pageflip';
-import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize, Minimize, Download } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize, Minimize, Download, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { saveSubmission } from '@/lib/firebase';
+import { toast } from 'sonner';
 
 interface FlipbookViewerProps {
   // IMPORTANT: `pages` should contain ONLY inner pages.
   // Cover (Logo.png) and last Thank You page are added automatically.
   pages: string[];
+  // Optional: disable submit button (used on Blog page)
+  allowSubmit?: boolean;
 }
 
 interface PageProps {
@@ -16,7 +20,7 @@ interface PageProps {
   imageSrc?: string;
 }
 
-// ✅ ONLY CHANGE: now renders children when imageSrc is not provided
+// ✅ Page: renders either image, children, or placeholder
 const Page = forwardRef<HTMLDivElement, PageProps>(({ imageSrc, pageNumber, children }, ref) => {
   return (
     <div ref={ref} className="page-paper w-full h-full overflow-hidden">
@@ -41,10 +45,11 @@ const Page = forwardRef<HTMLDivElement, PageProps>(({ imageSrc, pageNumber, chil
 
 Page.displayName = 'Page';
 
-const FlipbookViewer = ({ pages }: FlipbookViewerProps) => {
+const FlipbookViewer = ({ pages, allowSubmit = true }: FlipbookViewerProps) => {
   const flipBookRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const prevPageRef = useRef<number>(0);
+
   const [currentPage, setCurrentPage] = useState(0);
   const [zoom, setZoom] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -53,12 +58,15 @@ const FlipbookViewer = ({ pages }: FlipbookViewerProps) => {
   const [enableRolling, setEnableRolling] = useState(false);
   const [enableSound, setEnableSound] = useState(true);
   const [userMeta, setUserMeta] = useState<{name?:string,email?:string,location?:string,company?:string} | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const audioCtxRef = useRef<AudioContext | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // TOTAL pages = cover + inner pages + thank you
   const totalPages = pages.length + 2;
 
+  // Load user meta from localStorage
   useEffect(() => {
     try {
       const raw = localStorage.getItem('flipper_user');
@@ -130,7 +138,7 @@ const FlipbookViewer = ({ pages }: FlipbookViewerProps) => {
   };
 
   const triggerRollingAnimation = (_direction: 'left' | 'right') => {
-    // no-op: rolling animation disabled
+    // rolling animation disabled
     return;
   };
 
@@ -307,6 +315,37 @@ const FlipbookViewer = ({ pages }: FlipbookViewerProps) => {
     }
   };
 
+  // ✅ NEW: submit flipbook to Firebase
+  const handleSubmitFlipbook = async () => {
+    if (!pages || pages.length === 0) {
+      toast.error('No pages to submit');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const submission = {
+        pages,
+        user: userMeta || {},
+        createdAt: Date.now(),
+        stats: {
+          likes: 0,
+          views: 0,
+          shares: 0,
+        },
+      };
+
+      const id = await saveSubmission(submission);
+      toast.success('Flipbook submitted to Blog successfully!');
+      console.log('Saved submission with id:', id);
+    } catch (err) {
+      console.error('Submit failed', err);
+      toast.error('Failed to submit flipbook. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div 
       ref={containerRef}
@@ -403,6 +442,25 @@ const FlipbookViewer = ({ pages }: FlipbookViewerProps) => {
           >
             <Download className="w-4 h-4" />
           </Button>
+
+          {allowSubmit && (
+            <Button
+              variant="default"
+              size="sm"
+              className="ml-2"
+              onClick={handleSubmitFlipbook}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                'Submitting...'
+              ) : (
+                <>
+                  <Send className="w-4 h-4 mr-1" />
+                  Submit
+                </>
+              )}
+            </Button>
+          )}
         </div>
       </div>
 

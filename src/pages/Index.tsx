@@ -6,8 +6,11 @@ import FlipbookViewer from '@/components/FlipbookViewer';
 import MetadataForm from '@/components/MetadataForm';
 import { processFiles, ProcessingProgress } from '@/lib/pdfProcessor';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';   // ✅ IMPORT
 
 const Index = () => {
+  const navigate = useNavigate(); // ✅ INIT NAVIGATION
+
   const [files, setFiles] = useState<File[]>([]);
   const [pages, setPages] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -37,13 +40,12 @@ const Index = () => {
 
     try {
       const generatedPages = await processFiles(files, setProgress);
-      
+
       if (generatedPages.length === 0) {
         throw new Error('No pages were generated');
       }
 
       setPages(generatedPages);
-      // open metadata collection dialog before showing flipbook
       setShowMetadataDialog(true);
       toast.success(`Flipbook created with ${generatedPages.length} pages! Please provide a few details.`);
     } catch (error) {
@@ -66,49 +68,64 @@ const Index = () => {
       {/* Header */}
       <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-40">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+          
+          {/* LOGO */}
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-[hsl(32,75%,50%)] flex items-center justify-center shadow-glow">
               <Book className="w-5 h-5 text-primary-foreground" />
             </div>
             <h1 className="text-xl font-serif font-semibold text-foreground">Flipper</h1>
           </div>
-          
-          {showFlipbook && (
-            <Button variant="outline" onClick={handleReset}>
-              Create New
+
+          {/* HEADER BUTTONS */}
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/bloges')}
+            >
+              Bloges
             </Button>
-          )}
+
+            {showFlipbook && (
+              <Button variant="outline" onClick={handleReset}>
+                Create New
+              </Button>
+            )}
+          </div>
+
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-12">
         {pages.length === 0 ? (
           <div className="max-w-3xl mx-auto">
-            {/* Hero Section */}
+            
+            {/* Hero */}
             <div className="text-center mb-12 animate-fade-up">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-secondary border border-border/50 mb-6">
                 <Sparkles className="w-4 h-4 text-primary" />
                 <span className="text-sm text-muted-foreground">Transform documents into interactive flipbooks</span>
               </div>
-              
+
               <h2 className="text-4xl md:text-5xl font-serif font-bold text-foreground mb-4 leading-tight">
                 Create Beautiful
                 <span className="block text-primary">Digital Flipbooks</span>
               </h2>
-              
+
               <p className="text-lg text-muted-foreground max-w-xl mx-auto">
                 Upload your PDFs and images to create stunning, interactive flipbooks with realistic page-turning effects.
               </p>
             </div>
 
-            {/* File Upload */}
+            {/* Upload */}
             <FileUpload 
               onFilesSelected={handleFilesSelected}
               files={files}
               onRemoveFile={handleRemoveFile}
             />
 
-            {/* Generate Button */}
+            {/* Generate */}
             {files.length > 0 && (
               <div className="mt-8 text-center animate-scale-in">
                 <Button
@@ -162,6 +179,7 @@ const Index = () => {
                 </div>
               ))}
             </div>
+
           </div>
         ) : (
           <>
