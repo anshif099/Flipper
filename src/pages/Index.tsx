@@ -1,15 +1,15 @@
 import { useState, useCallback } from 'react';
-import { Book, Sparkles, ArrowRight, Loader2 } from 'lucide-react';
+import { Book, Sparkles, ArrowRight, Loader2, Upload, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import FileUpload from '@/components/FileUpload';
 import FlipbookViewer from '@/components/FlipbookViewer';
 import MetadataForm from '@/components/MetadataForm';
 import { processFiles, ProcessingProgress } from '@/lib/pdfProcessor';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';   // ✅ IMPORT
+import { useNavigate } from 'react-router-dom';
 
 const Index = () => {
-  const navigate = useNavigate(); // ✅ INIT NAVIGATION
+  const navigate = useNavigate();
 
   const [files, setFiles] = useState<File[]>([]);
   const [pages, setPages] = useState<string[]>([]);
@@ -19,14 +19,16 @@ const Index = () => {
   const [showMetadataDialog, setShowMetadataDialog] = useState(false);
 
   const handleFilesSelected = useCallback((newFiles: File[]) => {
-    setFiles(prev => [...prev, ...newFiles]);
+    setFiles((prev) => [...prev, ...newFiles]);
     setShowFlipbook(false);
+    setPages([]);
     toast.success(`${newFiles.length} file${newFiles.length > 1 ? 's' : ''} added`);
   }, []);
 
   const handleRemoveFile = useCallback((index: number) => {
-    setFiles(prev => prev.filter((_, i) => i !== index));
+    setFiles((prev) => prev.filter((_, i) => i !== index));
     setShowFlipbook(false);
+    setPages([]);
   }, []);
 
   const handleGenerateFlipbook = async () => {
@@ -47,7 +49,10 @@ const Index = () => {
 
       setPages(generatedPages);
       setShowMetadataDialog(true);
-      toast.success(`Flipbook created with ${generatedPages.length} pages! Please provide a few details.`);
+      setShowFlipbook(false);
+      toast.success(
+        `Flipbook created with ${generatedPages.length} pages! Please provide a few details.`
+      );
     } catch (error) {
       console.error('Error processing files:', error);
       toast.error('Failed to process files. Please try again.');
@@ -61,143 +66,216 @@ const Index = () => {
     setFiles([]);
     setPages([]);
     setShowFlipbook(false);
+    setShowMetadataDialog(false);
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-black text-slate-50">
       {/* Header */}
-      <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-40">
+      <header className="border-b border-amber-500/20 bg-black/40 backdrop-blur-sm sticky top-0 z-40">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          
-          {/* LOGO */}
+          {/* Logo */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-[hsl(32,75%,50%)] flex items-center justify-center shadow-glow">
-              <Book className="w-5 h-5 text-primary-foreground" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-[0_0_20px_rgba(245,158,11,0.7)]">
+              <Book className="w-5 h-5 text-black" />
             </div>
-            <h1 className="text-xl font-serif font-semibold text-foreground">Flipper</h1>
+            <h1 className="text-xl font-semibold tracking-wide text-amber-300">
+              FLIPBOOK CONVERTER
+            </h1>
           </div>
 
-          {/* HEADER BUTTONS */}
+          {/* Header buttons */}
           <div className="flex items-center gap-3">
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={() => navigate('/bloges')}
+              className="border-amber-400/60 text-amber-300 hover:bg-amber-500 hover:text-black hover:border-amber-500 rounded-full px-4"
             >
-              Bloges
+              Blog
             </Button>
 
-            {showFlipbook && (
-              <Button variant="outline" onClick={handleReset}>
+            {files.length > 0 || pages.length > 0 ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleReset}
+                className="text-slate-300 hover:text-amber-300"
+              >
                 Create New
               </Button>
-            )}
+            ) : null}
           </div>
-
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-12">
-        {pages.length === 0 ? (
-          <div className="max-w-3xl mx-auto">
-            
-            {/* Hero */}
-            <div className="text-center mb-12 animate-fade-up">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-secondary border border-border/50 mb-6">
-                <Sparkles className="w-4 h-4 text-primary" />
-                <span className="text-sm text-muted-foreground">Transform documents into interactive flipbooks</span>
+      {/* Main content */}
+      <main className="container mx-auto px-4 py-8 md:py-12">
+        <div className="rounded-3xl border border-amber-500/15 bg-black/40 shadow-[0_24px_80px_rgba(0,0,0,0.9)] p-6 md:p-8">
+          {/* Title + subtitle */}
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-8">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/40 mb-3">
+                <Sparkles className="w-4 h-4 text-amber-400" />
+                <span className="text-xs text-amber-100/80">
+                  Upload PDFs or images to create an interactive flipbook
+                </span>
               </div>
-
-              <h2 className="text-4xl md:text-5xl font-serif font-bold text-foreground mb-4 leading-tight">
-                Create Beautiful
-                <span className="block text-primary">Digital Flipbooks</span>
+              <h2 className="text-3xl md:text-4xl font-semibold text-amber-300 tracking-wide">
+                Flipbook Converter
               </h2>
-
-              <p className="text-lg text-muted-foreground max-w-xl mx-auto">
-                Upload your PDFs and images to create stunning, interactive flipbooks with realistic page-turning effects.
+              <p className="mt-2 text-sm md:text-base text-slate-300/80">
+                Upload PDF or image files, generate a flipbook, preview it, and export or share
+                your creation.
               </p>
             </div>
+          </div>
 
-            {/* Upload */}
-            <FileUpload 
-              onFilesSelected={handleFilesSelected}
-              files={files}
-              onRemoveFile={handleRemoveFile}
-            />
+          {/* Two-column layout */}
+          <div className="grid gap-6 lg:gap-8 lg:grid-cols-2">
+            {/* LEFT: Upload panel */}
+            <div className="rounded-3xl border border-amber-500/15 bg-slate-950/60 p-5 md:p-6 flex flex-col">
+              {/* Header */}
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/20 flex items-center justify-center">
+                  <Upload className="w-4 h-4 text-amber-300" />
+                </div>
+                <div>
+                  <h3 className="text-base md:text-lg font-semibold text-amber-200">
+                    Upload Files
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Supported: PDF, JPG, PNG (Max: 10MB per file)
+                  </p>
+                </div>
+              </div>
 
-            {/* Generate */}
-            {files.length > 0 && (
-              <div className="mt-8 text-center animate-scale-in">
+              {/* Upload area */}
+              <div className="flex-1 rounded-2xl border border-amber-500/25 bg-gradient-to-br from-amber-500/5 via-slate-950 to-slate-950/80 p-3 md:p-4">
+                <FileUpload
+                  onFilesSelected={handleFilesSelected}
+                  files={files}
+                  onRemoveFile={handleRemoveFile}
+                />
+              </div>
+
+              {/* Actions row */}
+              <div className="mt-5 flex flex-col sm:flex-row items-center gap-3">
                 <Button
                   onClick={handleGenerateFlipbook}
-                  disabled={isProcessing}
-                  variant="gold"
-                  size="lg"
-                  className="min-w-[200px]"
+                  disabled={isProcessing || files.length === 0}
+                  className="w-full sm:w-auto bg-amber-500 text-black hover:bg-amber-400 font-semibold rounded-xl px-6"
                 >
                   {isProcessing ? (
                     <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      <span>Processing...</span>
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      Processing...
                     </>
                   ) : (
                     <>
-                      <span>Generate Flipbook</span>
-                      <ArrowRight className="w-5 h-5" />
+                      <ArrowRight className="w-4 h-4 mr-2" />
+                      Generate Flipbook
                     </>
                   )}
                 </Button>
 
-                {progress && (
-                  <div className="mt-4 space-y-2">
-                    <div className="h-2 bg-secondary rounded-full overflow-hidden max-w-md mx-auto">
-                      <div 
-                        className="h-full bg-gradient-to-r from-primary to-[hsl(32,75%,50%)] transition-all duration-300"
-                        style={{ width: `${(progress.current / progress.total) * 100}%` }}
-                      />
+                <Button
+                  variant="outline"
+                  onClick={handleReset}
+                  disabled={files.length === 0 && pages.length === 0}
+                  className="w-full sm:w-auto rounded-xl border-slate-600/70 text-slate-200 hover:border-amber-400 hover:text-amber-200 hover:bg-amber-500/5"
+                >
+                  Clear All
+                </Button>
+              </div>
+
+              {/* Progress */}
+              {progress && (
+                <div className="mt-4 space-y-2">
+                  <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-amber-400 to-amber-600 transition-all duration-300"
+                      style={{ width: `${(progress.current / progress.total) * 100}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-slate-400">{progress.status}</p>
+                </div>
+              )}
+            </div>
+
+            {/* RIGHT: Preview panel */}
+            <div className="rounded-3xl border border-amber-500/15 bg-slate-950/60 p-5 md:p-6 flex flex-col">
+              {/* Header */}
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/20 flex items-center justify-center">
+                  <BookOpen className="w-4 h-4 text-amber-300" />
+                </div>
+                <div>
+                  <h3 className="text-base md:text-lg font-semibold text-amber-200">
+                    Flipbook Preview
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Your generated flipbook appears here once ready.
+                  </p>
+                </div>
+              </div>
+
+              {/* Preview area */}
+              <div className="flex-1 rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/8 via-slate-950 to-slate-950/90 p-4 flex items-center justify-center">
+                {showFlipbook && pages.length > 0 ? (
+                  <FlipbookViewer pages={pages} compact />
+                ) : (
+                  <div className="text-center max-w-sm mx-auto py-10">
+                    <div className="w-16 h-16 rounded-2xl bg-amber-500 shadow-[0_0_30px_rgba(245,158,11,0.8)] mx-auto mb-4 flex items-center justify-center">
+                      <BookOpen className="w-8 h-8 text-black" />
                     </div>
-                    <p className="text-sm text-muted-foreground">{progress.status}</p>
+                    <p className="text-sm md:text-base text-amber-50 font-medium mb-2">
+                      Welcome to Flipbook Converter
+                    </p>
+                    <p className="text-xs md:text-sm text-slate-300">
+                      Upload PDF or image files using the panel on the left, click{' '}
+                      <span className="text-amber-300 font-semibold">Generate Flipbook</span>, fill in
+                      your details, and your flipbook will appear here.
+                    </p>
                   </div>
                 )}
               </div>
-            )}
-
-            {/* Features */}
-            <div className="mt-16 grid md:grid-cols-3 gap-6">
-              {[
-                { title: 'PDF Support', description: 'Convert multi-page PDFs into flipbooks' },
-                { title: 'Image Support', description: 'Add JPG and PNG images as pages' },
-                { title: 'Realistic Effects', description: 'Smooth page-turning animations' },
-              ].map((feature, index) => (
-                <div 
-                  key={feature.title}
-                  className="p-6 rounded-2xl bg-secondary/30 border border-border/50 text-center animate-fade-up"
-                  style={{ animationDelay: `${index * 100}ms` }}
-                >
-                  <h3 className="font-serif font-semibold text-foreground mb-2">{feature.title}</h3>
-                  <p className="text-sm text-muted-foreground">{feature.description}</p>
-                </div>
-              ))}
             </div>
-
           </div>
-        ) : (
-          <>
-            <FlipbookViewer pages={pages} />
-            <MetadataForm
-              open={showMetadataDialog}
-              pagesCount={pages.length}
-              onClose={() => setShowMetadataDialog(false)}
-              onSaved={() => setShowFlipbook(true)}
-            />
-          </>
-        )}
+
+          {/* How-to section */}
+          <div className="mt-8 rounded-3xl border border-amber-500/15 bg-slate-950/70 p-5 md:p-6">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-7 h-7 rounded-full bg-amber-500 flex items-center justify-center text-black text-sm font-semibold">
+                ?
+              </div>
+              <h3 className="text-base md:text-lg font-semibold text-amber-200">
+                How to use this flipbook converter
+              </h3>
+            </div>
+            <ol className="mt-3 space-y-2 text-xs md:text-sm text-slate-300 list-decimal list-inside">
+              <li>Click &quot;Browse Files&quot; or drag &amp; drop PDF or image files into the upload area.</li>
+              <li>Click &quot;Generate Flipbook&quot; to convert your files into a flipbook.</li>
+              <li>Fill in your details when prompted so the flipbook can be saved and shared.</li>
+              <li>Use the flipbook controls to flip pages, zoom, or view fullscreen.</li>
+              <li>Export your flipbook as a PDF or submit it to the blog if you’d like.</li>
+            </ol>
+          </div>
+        </div>
+
+        {/* Metadata dialog */}
+        <MetadataForm
+          open={showMetadataDialog}
+          pagesCount={pages.length}
+          onClose={() => setShowMetadataDialog(false)}
+          onSaved={() => setShowFlipbook(true)}
+        />
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-border/50 py-6 mt-auto">
-        <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>Built with PDF.js and React PageFlip</p>
+      <footer className="border-t border-amber-500/20 py-4 mt-auto bg-black/60">
+        <div className="container mx-auto px-4 text-center text-xs md:text-sm text-slate-400">
+          <p>Flipbook Converter © 2025 • Built with PDF.js and React PageFlip</p>
         </div>
       </footer>
     </div>

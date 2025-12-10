@@ -21,6 +21,8 @@ interface FlipbookViewerProps {
   pages: string[];
   // Optional: disable submit button (used on Blog page)
   allowSubmit?: boolean;
+  // Optional: more compact padding / sizing when used inside a card (Index page)
+  compact?: boolean;
 }
 
 interface PageProps {
@@ -56,7 +58,11 @@ const Page = forwardRef<HTMLDivElement, PageProps>(
 
 Page.displayName = 'Page';
 
-const FlipbookViewer = ({ pages, allowSubmit = true }: FlipbookViewerProps) => {
+const FlipbookViewer = ({
+  pages,
+  allowSubmit = true,
+  compact = false,
+}: FlipbookViewerProps) => {
   const flipBookRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const prevPageRef = useRef<number>(0);
@@ -92,38 +98,46 @@ const FlipbookViewer = ({ pages, allowSubmit = true }: FlipbookViewerProps) => {
 
     const updateDimensions = () => {
       const container = containerRef.current;
-      if (container) {
-        const containerWidth = container.clientWidth;
-        const containerHeight = window.innerHeight * 0.7;
+      if (!container) return;
 
-        const mobile = window.innerWidth < 768;
-        setIsMobile(mobile);
+      const containerWidth = container.clientWidth;
+      const containerHeight = window.innerHeight * 0.7;
 
-        const aspectRatio = mobile ? 0.7 : 0.75;
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
 
-        // width is per page; book may be 2*width on desktop
-        let width = mobile
-          ? Math.min(containerWidth * 0.9, 480) // almost full width on mobile
-          : Math.min(containerWidth * 0.45, 500);
+      // 🔑 key part: make the book narrower in compact mode so that
+      // 2 * pageWidth + arrows fit inside containerWidth
+      const aspectRatio = mobile ? 0.7 : 0.75;
 
-        let height = width / aspectRatio;
+      // base factor: how much of the container each *page* should use
+      const pageWidthFactor = mobile
+        ? 0.9 // mobile: single-page portrait
+        : compact
+        ? 0.32 // compact desktop: ~64% of column for two pages
+        : 0.45; // full viewer desktop: ~90% of container for two pages
 
-        if (height > containerHeight) {
-          height = containerHeight;
-          width = height * aspectRatio;
-        }
+      let width = Math.min(
+        containerWidth * pageWidthFactor,
+        compact ? 420 : 500
+      );
+      let height = width / aspectRatio;
 
-        setDimensions({ width: Math.floor(width), height: Math.floor(height) });
-
-        // reset zoom on mobile
-        if (mobile) setZoom(1);
+      if (height > containerHeight) {
+        height = containerHeight;
+        width = height * aspectRatio;
       }
+
+      setDimensions({ width: Math.floor(width), height: Math.floor(height) });
+
+      // reset zoom on mobile
+      if (mobile) setZoom(1);
     };
 
     updateDimensions();
     window.addEventListener('resize', updateDimensions);
     return () => window.removeEventListener('resize', updateDimensions);
-  }, [isFullscreen]);
+  }, [isFullscreen, compact]);
 
   useEffect(() => {
     try {
@@ -411,6 +425,7 @@ const FlipbookViewer = ({ pages, allowSubmit = true }: FlipbookViewerProps) => {
       ref={containerRef}
       className={cn(
         'flex flex-col items-center justify-center py-4 sm:py-8 px-2 sm:px-4 animate-fade-up w-full overflow-x-hidden',
+        compact && 'py-2 sm:py-4',
         isFullscreen && 'fixed inset-0 z-50 bg-background p-4 sm:p-8'
       )}
     >
@@ -516,7 +531,7 @@ const FlipbookViewer = ({ pages, allowSubmit = true }: FlipbookViewerProps) => {
 
       {/* Flipbook */}
       <div
-        className="flipbook-container flex items-center justify-center w-full overflow-x-hidden"
+        className="flipbook-container flex items-center justify-center w-full max-w-full overflow-x-hidden"
         style={{
           transform: `scale(${isMobile ? 1 : zoom})`,
           transformOrigin: 'center center',
@@ -539,14 +554,14 @@ const FlipbookViewer = ({ pages, allowSubmit = true }: FlipbookViewerProps) => {
             height={dimensions.height}
             size="stretch"
             minWidth={220}
-            maxWidth={600}
+            maxWidth={dimensions.width}
             minHeight={320}
             maxHeight={800}
             showCover={true}
             mobileScrollSupport={true}
             onFlip={handlePageFlip}
             className="flipbook"
-            style={{}}
+            style={{ maxWidth: '100%' }}
             startPage={0}
             drawShadow={true}
             flippingTime={flippingTime}
@@ -597,7 +612,8 @@ const FlipbookViewer = ({ pages, allowSubmit = true }: FlipbookViewerProps) => {
           </HTMLFlipBook>
         </div>
 
-        {totalPages > 10 && (
+        {/* In compact mode we hide the "+N more" to save space */}
+        {!compact && totalPages > 10 && (
           <span className="text-[10px] sm:text-xs text-muted-foreground ml-1 sm:ml-2">
             +{totalPages - 10} more
           </span>
