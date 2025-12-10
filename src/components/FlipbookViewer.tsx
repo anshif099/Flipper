@@ -1,6 +1,15 @@
 import { useRef, useState, useEffect, forwardRef } from 'react';
 import HTMLFlipBook from 'react-pageflip';
-import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize, Minimize, Download, Send } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  ZoomIn,
+  ZoomOut,
+  Maximize,
+  Minimize,
+  Download,
+  Send,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { saveSubmission } from '@/lib/firebase';
@@ -21,27 +30,29 @@ interface PageProps {
 }
 
 // ✅ Page: renders either image, children, or placeholder
-const Page = forwardRef<HTMLDivElement, PageProps>(({ imageSrc, pageNumber, children }, ref) => {
-  return (
-    <div ref={ref} className="page-paper w-full h-full overflow-hidden">
-      {imageSrc ? (
-        <img 
-          src={imageSrc} 
-          alt={`Page ${pageNumber}`}
-          className="w-full h-full object-contain"
-        />
-      ) : children ? (
-        <div className="w-full h-full flex items-center justify-center">
-          {children}
-        </div>
-      ) : (
-        <div className="w-full h-full flex items-center justify-center bg-page-cream">
-          <p className="text-muted-foreground">Page {pageNumber}</p>
-        </div>
-      )}
-    </div>
-  );
-});
+const Page = forwardRef<HTMLDivElement, PageProps>(
+  ({ imageSrc, pageNumber, children }, ref) => {
+    return (
+      <div ref={ref} className="page-paper w-full h-full overflow-hidden">
+        {imageSrc ? (
+          <img
+            src={imageSrc}
+            alt={`Page ${pageNumber}`}
+            className="w-full h-full object-contain"
+          />
+        ) : children ? (
+          <div className="w-full h-full flex items-center justify-center">
+            {children}
+          </div>
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-page-cream">
+            <p className="text-muted-foreground">Page {pageNumber}</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+);
 
 Page.displayName = 'Page';
 
@@ -57,8 +68,14 @@ const FlipbookViewer = ({ pages, allowSubmit = true }: FlipbookViewerProps) => {
   const [flippingTime, setFlippingTime] = useState(600);
   const [enableRolling, setEnableRolling] = useState(false);
   const [enableSound, setEnableSound] = useState(true);
-  const [userMeta, setUserMeta] = useState<{name?:string,email?:string,location?:string,company?:string} | null>(null);
+  const [userMeta, setUserMeta] = useState<{
+    name?: string;
+    email?: string;
+    location?: string;
+    company?: string;
+  } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   const audioCtxRef = useRef<AudioContext | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -66,7 +83,7 @@ const FlipbookViewer = ({ pages, allowSubmit = true }: FlipbookViewerProps) => {
   // TOTAL pages = cover + inner pages + thank you
   const totalPages = pages.length + 2;
 
-  // Load user meta from localStorage
+  // Load user meta & handle responsive dimensions
   useEffect(() => {
     try {
       const raw = localStorage.getItem('flipper_user');
@@ -78,17 +95,28 @@ const FlipbookViewer = ({ pages, allowSubmit = true }: FlipbookViewerProps) => {
       if (container) {
         const containerWidth = container.clientWidth;
         const containerHeight = window.innerHeight * 0.7;
-        
-        const aspectRatio = 0.75;
-        let width = Math.min(containerWidth * 0.45, 500);
+
+        const mobile = window.innerWidth < 768;
+        setIsMobile(mobile);
+
+        const aspectRatio = mobile ? 0.7 : 0.75;
+
+        // width is per page; book may be 2*width on desktop
+        let width = mobile
+          ? Math.min(containerWidth * 0.9, 480) // almost full width on mobile
+          : Math.min(containerWidth * 0.45, 500);
+
         let height = width / aspectRatio;
-        
+
         if (height > containerHeight) {
           height = containerHeight;
           width = height * aspectRatio;
         }
-        
+
         setDimensions({ width: Math.floor(width), height: Math.floor(height) });
+
+        // reset zoom on mobile
+        if (mobile) setZoom(1);
       }
     };
 
@@ -124,8 +152,15 @@ const FlipbookViewer = ({ pages, allowSubmit = true }: FlipbookViewerProps) => {
     flipBookRef.current?.pageFlip()?.flipNext();
   };
 
-  const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.25, 2));
-  const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.25, 0.5));
+  const handleZoomIn = () => {
+    if (isMobile) return; // disable zoom scaling on mobile to avoid cut-off
+    setZoom((prev) => Math.min(prev + 0.25, 2));
+  };
+
+  const handleZoomOut = () => {
+    if (isMobile) return;
+    setZoom((prev) => Math.max(prev - 0.25, 0.5));
+  };
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -145,7 +180,8 @@ const FlipbookViewer = ({ pages, allowSubmit = true }: FlipbookViewerProps) => {
   const ensureAudioContext = () => {
     if (!audioCtxRef.current) {
       try {
-        audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+        audioCtxRef.current = new (window.AudioContext ||
+          (window as any).webkitAudioContext)();
       } catch (err) {
         console.error('Unable to create AudioContext', err);
       }
@@ -179,7 +215,9 @@ const FlipbookViewer = ({ pages, allowSubmit = true }: FlipbookViewerProps) => {
       if (audio) {
         ensureAudioContext();
         try {
-          try { audio.currentTime = 0; } catch {}
+          try {
+            audio.currentTime = 0;
+          } catch {}
           await audio.play();
           return;
         } catch {}
@@ -226,7 +264,7 @@ const FlipbookViewer = ({ pages, allowSubmit = true }: FlipbookViewerProps) => {
   }, []);
 
   const handleExport = () => {
-    exportFlipbook(false).catch((err)=> console.error('Export failed', err));
+    exportFlipbook(false).catch((err) => console.error('Export failed', err));
   };
 
   const exportFlipbook = async (returnBlob = false) => {
@@ -258,17 +296,25 @@ const FlipbookViewer = ({ pages, allowSubmit = true }: FlipbookViewerProps) => {
       const pageWidth = pdf.internal.pageSize.getWidth();
       pdf.setFontSize(28);
       pdf.text('Flipper', pageWidth / 2, 120, { align: 'center' });
-      try { await drawImageOnPdf(logoSrc); } catch {}
+      try {
+        await drawImageOnPdf(logoSrc);
+      } catch {}
       if (userMeta?.name) {
         pdf.setFontSize(14);
-        pdf.text(`Owner: ${userMeta.name}`, pageWidth / 2, pageWidth - 80, { align: 'center' });
+        pdf.text(`Owner: ${userMeta.name}`, pageWidth / 2, pageWidth - 80, {
+          align: 'center',
+        });
       }
     } catch {}
 
     // INNER PAGES from `pages[]`
     for (let i = 0; i < pages.length; i++) {
       pdf.addPage();
-      try { await drawImageOnPdf(pages[i]); } catch (e) { console.warn('Image draw failed', e); }
+      try {
+        await drawImageOnPdf(pages[i]);
+      } catch (e) {
+        console.warn('Image draw failed', e);
+      }
     }
 
     // LAST "Thank you" PAGE
@@ -278,9 +324,19 @@ const FlipbookViewer = ({ pages, allowSubmit = true }: FlipbookViewerProps) => {
       await drawImageOnPdf(logoSrc);
     } catch {}
     pdf.setFontSize(20);
-    pdf.text('Thank you for using Flipper', pdf.internal.pageSize.getWidth() / 2, 160, { align: 'center' });
+    pdf.text(
+      'Thank you for using Flipper',
+      pdf.internal.pageSize.getWidth() / 2,
+      160,
+      { align: 'center' }
+    );
     pdf.setFontSize(12);
-    pdf.text('Share your flipbook with others!', pdf.internal.pageSize.getWidth() / 2, 190, { align: 'center' });
+    pdf.text(
+      'Share your flipbook with others!',
+      pdf.internal.pageSize.getWidth() / 2,
+      190,
+      { align: 'center' }
+    );
 
     if (returnBlob) {
       const blob = pdf.output('blob');
@@ -298,7 +354,11 @@ const FlipbookViewer = ({ pages, allowSubmit = true }: FlipbookViewerProps) => {
       const file = new File([blob], 'flipbook.pdf', { type: 'application/pdf' });
       if ((navigator as any).canShare && (navigator as any).canShare({ files: [file] })) {
         try {
-          await (navigator as any).share({ files: [file], title: 'My Flipbook', text: 'Check out my flipbook' });
+          await (navigator as any).share({
+            files: [file],
+            title: 'My Flipbook',
+            text: 'Check out my flipbook',
+          });
           return;
         } catch (err) {
           console.warn('Share failed', err);
@@ -315,7 +375,7 @@ const FlipbookViewer = ({ pages, allowSubmit = true }: FlipbookViewerProps) => {
     }
   };
 
-  // ✅ NEW: submit flipbook to Firebase
+  // Submit flipbook to Firebase
   const handleSubmitFlipbook = async () => {
     if (!pages || pages.length === 0) {
       toast.error('No pages to submit');
@@ -347,33 +407,35 @@ const FlipbookViewer = ({ pages, allowSubmit = true }: FlipbookViewerProps) => {
   };
 
   return (
-    <div 
+    <div
       ref={containerRef}
       className={cn(
-        "flex flex-col items-center justify-center py-8 animate-fade-up",
-        isFullscreen && "fixed inset-0 z-50 bg-background p-8"
+        'flex flex-col items-center justify-center py-4 sm:py-8 px-2 sm:px-4 animate-fade-up w-full overflow-x-hidden',
+        isFullscreen && 'fixed inset-0 z-50 bg-background p-4 sm:p-8'
       )}
     >
       {/* Controls - Top */}
-      <div className="flex items-center justify-between w-full max-w-4xl mb-6 px-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full max-w-4xl mb-4 sm:mb-6 gap-3 px-1 sm:px-4">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground font-medium">
+          <span className="text-xs sm:text-sm text-muted-foreground font-medium">
             Page {currentPage + 1} of {totalPages}
           </span>
         </div>
-        
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="icon" 
+
+        <div className="flex flex-wrap items-center justify-end gap-2 text-xs sm:text-sm">
+          <Button
+            variant="icon"
             size="icon"
             onClick={handleZoomOut}
-            disabled={zoom <= 0.5}
+            disabled={zoom <= 0.5 || isMobile}
           >
             <ZoomOut className="w-4 h-4" />
           </Button>
 
-          <div className="flex items-center gap-2 ml-2">
-            <label className="text-xs text-muted-foreground">Flip speed</label>
+          <div className="flex items-center gap-2 ml-0 sm:ml-2 w-full sm:w-auto">
+            <label className="text-[11px] text-muted-foreground whitespace-nowrap">
+              Flip speed
+            </label>
             <input
               type="range"
               min={200}
@@ -381,65 +443,53 @@ const FlipbookViewer = ({ pages, allowSubmit = true }: FlipbookViewerProps) => {
               step={50}
               value={flippingTime}
               onChange={(e) => setFlippingTime(Number(e.target.value))}
-              className="w-40"
+              className="w-full sm:w-40"
             />
-            <span className="text-xs text-muted-foreground min-w-[3rem] text-center">
+            <span className="text-[11px] text-muted-foreground min-w-[3rem] text-right">
               {flippingTime}ms
             </span>
           </div>
 
-          <div className="flex items-center gap-2 ml-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setEnableRolling(prev => !prev)}
-              aria-pressed={enableRolling}
-              className="px-2"
-            >
-              {enableRolling ? 'Rolling: On' : 'Rolling: Off'}
-            </Button>
-          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setEnableRolling((prev) => !prev)}
+            aria-pressed={enableRolling}
+            className="px-2"
+          >
+            {enableRolling ? 'Rolling: On' : 'Rolling: Off'}
+          </Button>
 
-          <div className="flex items-center gap-2 ml-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setEnableSound(prev => !prev)}
-              aria-pressed={enableSound}
-              className="px-2"
-            >
-              {enableSound ? 'Sound: On' : 'Sound: Off'}
-            </Button>
-          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setEnableSound((prev) => !prev)}
+            aria-pressed={enableSound}
+            className="px-2"
+          >
+            {enableSound ? 'Sound: On' : 'Sound: Off'}
+          </Button>
 
-          <span className="text-sm text-muted-foreground min-w-[3rem] text-center">
+          <span className="text-xs sm:text-sm text-muted-foreground min-w-[3rem] text-center hidden sm:inline">
             {Math.round(zoom * 100)}%
           </span>
 
-          <Button 
-            variant="icon" 
+          <Button
+            variant="icon"
             size="icon"
             onClick={handleZoomIn}
-            disabled={zoom >= 2}
+            disabled={zoom >= 2 || isMobile}
           >
             <ZoomIn className="w-4 h-4" />
           </Button>
 
-          <div className="w-px h-6 bg-border mx-2" />
+          <div className="w-px h-6 bg-border mx-1 sm:mx-2" />
 
-          <Button 
-            variant="icon" 
-            size="icon"
-            onClick={toggleFullscreen}
-          >
+          <Button variant="icon" size="icon" onClick={toggleFullscreen}>
             {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
           </Button>
 
-          <Button 
-            variant="icon" 
-            size="icon"
-            onClick={handleExport}
-          >
+          <Button variant="icon" size="icon" onClick={handleExport}>
             <Download className="w-4 h-4" />
           </Button>
 
@@ -447,7 +497,7 @@ const FlipbookViewer = ({ pages, allowSubmit = true }: FlipbookViewerProps) => {
             <Button
               variant="default"
               size="sm"
-              className="ml-2"
+              className="ml-1"
               onClick={handleSubmitFlipbook}
               disabled={isSubmitting}
             >
@@ -465,29 +515,32 @@ const FlipbookViewer = ({ pages, allowSubmit = true }: FlipbookViewerProps) => {
       </div>
 
       {/* Flipbook */}
-      <div 
-        className="flipbook-container flex items-center justify-center"
-        style={{ transform: `scale(${zoom})`, transformOrigin: 'center center' }}
+      <div
+        className="flipbook-container flex items-center justify-center w-full overflow-x-hidden"
+        style={{
+          transform: `scale(${isMobile ? 1 : zoom})`,
+          transformOrigin: 'center center',
+        }}
       >
         <Button
           variant="ghost"
           size="icon"
           onClick={goToPrevPage}
           disabled={currentPage === 0}
-          className="mr-4 h-12 w-12 rounded-full bg-secondary/80 hover:bg-secondary disabled:opacity-30"
+          className="mr-2 sm:mr-4 h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-secondary/80 hover:bg-secondary disabled:opacity-30"
         >
-          <ChevronLeft className="w-6 h-6" />
+          <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
         </Button>
 
-        <div className="book-shadow rounded-lg overflow-hidden">
+        <div className="book-shadow rounded-lg overflow-hidden max-w-full">
           <HTMLFlipBook
             ref={flipBookRef}
             width={dimensions.width}
             height={dimensions.height}
             size="stretch"
-            minWidth={300}
+            minWidth={220}
             maxWidth={600}
-            minHeight={400}
+            minHeight={320}
             maxHeight={800}
             showCover={true}
             mobileScrollSupport={true}
@@ -497,7 +550,7 @@ const FlipbookViewer = ({ pages, allowSubmit = true }: FlipbookViewerProps) => {
             startPage={0}
             drawShadow={true}
             flippingTime={flippingTime}
-            usePortrait={false}
+            usePortrait={isMobile}
             startZIndex={0}
             autoSize={true}
             maxShadowOpacity={0.5}
@@ -510,34 +563,42 @@ const FlipbookViewer = ({ pages, allowSubmit = true }: FlipbookViewerProps) => {
             {/* FIRST COVER: always Logo.png */}
             <Page pageNumber={1}>
               <div className="w-full h-full flex flex-col items-center justify-center">
-                <img src="/Logo.png" alt="Logo" className="w-32 h-32 object-contain mb-4" />
-                <h2 className="text-2xl font-serif">Flipper</h2>
-                {userMeta?.name && <p className="mt-4 text-sm">Created by {userMeta.name}</p>}
+                <img
+                  src="/Logo.png"
+                  alt="Logo"
+                  className="w-24 h-24 sm:w-32 sm:h-32 object-contain mb-4"
+                />
+                <h2 className="text-xl sm:text-2xl font-serif">Flipper</h2>
+                {userMeta?.name && (
+                  <p className="mt-4 text-xs sm:text-sm">Created by {userMeta.name}</p>
+                )}
               </div>
             </Page>
 
             {/* INNER PAGES */}
             {pages.map((page, index) => (
-              <Page
-                key={index}
-                pageNumber={index + 2}  // after cover
-                imageSrc={page}
-              />
+              <Page key={index} pageNumber={index + 2} imageSrc={page} />
             ))}
 
             {/* LAST COVER: Thank You + Logo */}
             <Page pageNumber={totalPages}>
               <div className="w-full h-full flex flex-col items-center justify-center">
-                <h3 className="text-xl font-semibold">Thank you</h3>
-                <p className="text-sm mt-2">We hope you enjoyed your flipbook.</p>
-                <img src="/Logo.png" alt="Logo" className="w-20 h-20 object-contain mt-6" />
+                <h3 className="text-lg sm:text-xl font-semibold">Thank you</h3>
+                <p className="text-xs sm:text-sm mt-2">
+                  We hope you enjoyed your flipbook.
+                </p>
+                <img
+                  src="/Logo.png"
+                  alt="Logo"
+                  className="w-16 h-16 sm:w-20 sm:h-20 object-contain mt-6"
+                />
               </div>
             </Page>
           </HTMLFlipBook>
         </div>
 
         {totalPages > 10 && (
-          <span className="text-xs text-muted-foreground ml-2">
+          <span className="text-[10px] sm:text-xs text-muted-foreground ml-1 sm:ml-2">
             +{totalPages - 10} more
           </span>
         )}
@@ -547,9 +608,9 @@ const FlipbookViewer = ({ pages, allowSubmit = true }: FlipbookViewerProps) => {
           size="icon"
           onClick={goToNextPage}
           disabled={currentPage === totalPages - 1}
-          className="ml-4 h-12 w-12 rounded-full bg-secondary/80 hover:bg-secondary disabled:opacity-30"
+          className="ml-2 sm:ml-4 h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-secondary/80 hover:bg-secondary disabled:opacity-30"
         >
-          <ChevronRight className="w-6 h-6" />
+          <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
         </Button>
       </div>
     </div>
