@@ -29,8 +29,8 @@ const Header: React.FC = () => {
 
                 {/* RIGHT */}
                 <div className="ml-auto flex items-center gap-4">
-                    <a className="text-[14px] text-[#364153] font-arimo">Register</a>
-                    <button className="h-[35.99px] rounded-md bg-[#0099ff] px-3 text-[14px] text-white font-arimo whitespace-nowrap">
+                    <a className="text-[16px] text-[#364153] font-arimo">Register</a>
+                    <button className="h-[35.99px] rounded-md bg-[#0099ff] px-3 text-[16px] text-white font-arimo whitespace-nowrap">
                         Log in
                     </button>
                 </div>
