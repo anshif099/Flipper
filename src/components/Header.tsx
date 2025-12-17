@@ -3,7 +3,7 @@ import logo from "@/assets/logo.png";
 
 const Header: React.FC = () => {
     return (
-        <header className="w-full h-[69px] border-[1.21px] border-[#B8E6FE]/50 bg-white/80">
+        <header className="fixed top-0 left-0 z-50 w-full h-[69px] border-[1.21px] border-[#B8E6FE]/50 bg-white/70 backdrop-blur-md">
             <div className="mx-auto flex h-full max-w-7xl items-center px-6">
 
                 {/* LEFT + CENTER together */}
