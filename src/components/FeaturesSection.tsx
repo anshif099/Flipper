@@ -47,7 +47,7 @@ const FeaturesSection: React.FC = () => {
           >
             {/* Icon */}
             <div className="flex h-[40px] w-[40px] items-center justify-center rounded-lg">
-              <item.icon className="h-5 w-5 text-[#0099FF]" />
+              <item.icon className="h-[40px] w-[40px] text-[#00A6F4]" />
             </div>
 
             {/* Text */}
