@@ -5,24 +5,28 @@ const features = [
   {
     icon: BookOpen,
     title: "Personal uses",
+    animation: "hover:animate-[pageFlip_0.8s_ease-in-out]",
     description:
       "Easily share memorable moments with friends & family. Create eBooks with built-in analytics to showcase your portfolio, build a personal brand, share photo albums, tell your story, and much more!",
   },
   {
     icon: Palette,
     title: "Free",
+    animation: "hover:animate-[paintSpin_0.8s_ease-in-out]",
     description:
       "Our starter plan is designed for beginners, for an amateur way, or even for those who wish to upload a new edition every day.",
   },
   {
     icon: Zap,
     title: "Fast",
+    animation: "hover:animate-[zapPulse_0.6s_ease-in-out]",
     description:
       "Our service delivery utilizes the state of art of our servers and CDN system with top class content delivery rate with in-depth analytics along the way in near real-time.",
   },
   {
     icon: Lock,
     title: "Technical and publishers",
+    animation: "hover:animate-[lockWiggle_0.7s_ease-in-out]",
     description:
       "High level security and sharing for things for strategic or technical. Publish catalogs, manuals, user guides, ebooks, digital editions, and much more.",
   },
@@ -36,6 +40,7 @@ const FeaturesSection: React.FC = () => {
           <div
             key={index}
             className="
+              group
               flex flex-col
               w-[284px] h-[326.64px]
               bg-white
@@ -46,17 +51,25 @@ const FeaturesSection: React.FC = () => {
             "
           >
             {/* Icon */}
-            <div className="flex h-[40px] w-[40px] items-center justify-center rounded-lg">
-              <item.icon className="h-[40px] w-[40px] text-[#00A6F4]" />
+            <div className="flex h-[40px] w-[40px] items-center justify-center">
+              <item.icon
+                className={`
+                  h-[40px] w-[40px]
+                  text-[#00A6F4]
+                  transition-transform
+                  ${item.animation}
+                `}
+                strokeWidth={1.5}
+              />
             </div>
 
             {/* Text */}
             <div className="flex flex-col gap-3">
-              <h3 className="text-[16px] font-arimo font-[400px] text-[#0A0A0A] leading-[24px] tracking-[0px]">
+              <h3 className="text-[16px] font-arimo font-[400px] text-[#0A0A0A] leading-[24px]">
                 {item.title}
               </h3>
 
-              <p className="text-[14px] leading-[22px] font-arimo text-[#5A6B7B] font-[400px] tracking-[0px]">
+              <p className="text-[14px] leading-[22px] font-arimo text-[#5A6B7B]">
                 {item.description}
               </p>
             </div>

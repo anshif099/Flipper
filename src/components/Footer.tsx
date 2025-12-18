@@ -4,9 +4,9 @@ const Footer: React.FC = () => {
   return (
     <footer className="w-full bg-[#0085CC] text-white">
       <div className="mx-auto max-w-7xl px-6 py-16">
-
+        
         {/* Top links */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-10">
+        <div className="pl-40 grid grid-cols-2 sm:grid-cols-4 gap-10">
 
           {/* Column 1 */}
           <div>
