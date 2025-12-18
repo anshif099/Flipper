@@ -17,7 +17,7 @@ const Hero: React.FC = () => {
             <div className="absolute inset-0 bg-black/45" />
 
             {/* Content */}
-            <div className="pt-40 relative z-10 flex h-full flex-col items-center justify-center px-6 text-center text-white">
+            <div className="pt-20 relative z-10 flex h-full flex-col items-center justify-center px-6 text-center text-white">
                 <h1 className="
                 font-bold
   w-full md:w-[610px]
