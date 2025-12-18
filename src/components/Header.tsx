@@ -19,8 +19,8 @@ const Header: React.FC = () => {
         {/* CENTER NAV (Desktop only – unchanged) */}
         <nav className="absolute left-1/2 top-[2.3em] hidden -translate-x-1/2 -translate-y-1/2 md:flex items-center gap-8 text-[16px] text-[#364153] font-arimo">
           <a href="#">Creator</a>
-          <a href="#">Samples</a>
-          <a href="#">Prints</a>
+          <a href="#examples">Samples</a>
+          <a href="#">Blog</a>
           <a href="#">Guide</a>
           <a href="#">Install</a>
         </nav>

@@ -71,11 +71,11 @@ const ExamplesSection: React.FC = () => {
 
   // 👉 GRID VIEW
   return (
-    <section className="w-full bg-white py-16 px-4">
+    <section id="examples" className="w-full bg-white py-16 px-4">
       <div className="mx-auto max-w-7xl">
         {/* Header */}
         <div className="mb-8 flex items-center justify-between">
-          <h2 className="text-[28px] font-arimo font-semibold text-[#0A0A0A]">
+          <h2  className=" text-[28px] font-arimo font-semibold text-[#0A0A0A]">
             Examples
           </h2>
           <span className="text-[14px] text-[#0099FF] font-arimo">

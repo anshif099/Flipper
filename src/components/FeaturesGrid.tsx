@@ -13,31 +13,37 @@ const features = [
     icon: BookOpen,
     title: "Fast and reliable",
     desc: "Our fast PDF to flipbook converter can turn even the largest documents to flipbooks in a matter of seconds, not minutes. Turn around time is what we do best.",
+    animation: "group-hover:animate-[bookFlip_0.7s_ease-in-out]",
   },
   {
     icon: Smartphone,
     title: "Responsive",
     desc: "Our responsive flipbooks can adjust to any screen size. They provide a smooth reading experience on any device – mobile, tablet, or desktop.",
+    animation: "group-hover:animate-[phoneTilt_0.6s_ease-in-out]",
   },
   {
     icon: Palette,
     title: "Customizable",
     desc: "Customize your flipbook with colors, fonts, and branding. Add your logo, change background colors, and create a unique reading experience.",
+    animation: "group-hover:animate-[paletteSpin_0.7s_ease-in-out]",
   },
   {
     icon: Image,
     title: "Videos, audio and pictures",
     desc: "Embed videos, audio files, and images directly into your flipbook pages. Create rich, multimedia experiences for your readers.",
+    animation: "group-hover:animate-[imageZoom_0.6s_ease-in-out]",
   },
   {
     icon: Link2,
     title: "Links and lead-forms",
     desc: "Add clickable links and lead generation forms to convert readers into customers. Track engagement and gather valuable insights.",
+    animation: "group-hover:animate-[linkPulse_0.6s_ease-in-out]",
   },
   {
     icon: Lock,
     title: "Privacy and security",
     desc: "Protect your content with password protection and privacy controls. Control who can access your flipbooks and keep your content secure.",
+    animation: "group-hover:animate-[lockWiggle_0.7s_ease-in-out]",
   },
 ];
 
@@ -50,6 +56,7 @@ const FeaturesGrid: React.FC = () => {
             <div
               key={index}
               className="
+                group
                 bg-white
                 rounded-[20px]
                 px-8 py-10
@@ -59,7 +66,15 @@ const FeaturesGrid: React.FC = () => {
             >
               {/* Icon badge */}
               <div className="mx-auto mb-5 flex h-[48px] w-[48px] items-center justify-center rounded-full bg-[#EAF6FF]">
-                <item.icon className="h-[24px] w-[24px] text-[#0099FF]" />
+                <item.icon
+                  className={`
+                    h-[24px] w-[24px]
+                    text-[#0099FF]
+                    transition-transform
+                    ${item.animation}
+                  `}
+                  strokeWidth={1.5}
+                />
               </div>
 
               {/* Title */}
