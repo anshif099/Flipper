@@ -59,7 +59,7 @@ const FeaturesGrid: React.FC = () => {
             >
               {/* Icon badge */}
               <div className="mx-auto mb-5 flex h-[48px] w-[48px] items-center justify-center rounded-full bg-[#EAF6FF]">
-                <item.icon className="h-[48px] w-[48px] text-[#0099FF]" />
+                <item.icon className="h-[24px] w-[24px] text-[#0099FF]" />
               </div>
 
               {/* Title */}
