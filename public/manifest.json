@@ -1,0 +1,21 @@
+{
+  "name": "Flipper - Create Beautiful Digital Flipbooks",
+  "short_name": "Flipper",
+  "description": "Transform your PDFs and images into stunning, interactive digital flipbooks with realistic page-turning effects.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0099ff",
+  "icons": [
+    {
+      "src": "/Logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/Logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
