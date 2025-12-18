@@ -8,7 +8,7 @@ import fileIcon from "@/assets/file-icon.png";
 const Hero: React.FC = () => {
     return (
         <section
-            className="relative w-full h-[795px] bg-cover bg-center"
+            className="relative w-full h-[100vh] bg-cover bg-center"
             style={{
                 backgroundImage: `url(${heroBg})`,
             }}
