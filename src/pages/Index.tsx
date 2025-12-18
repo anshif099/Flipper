@@ -1,3 +1,4 @@
+import EdtechCTABanner from "@/components/EdtechCTABanner";
 import ExamplesSection from "@/components/ExamplesSection";
 import FeaturesGrid from "@/components/FeaturesGrid";
 import FeaturesSection from "@/components/FeaturesSection";
@@ -13,6 +14,7 @@ const Index = () => {
       <FeaturesSection />
       <ExamplesSection />
       <FeaturesGrid />
+      <EdtechCTABanner  />
     </>
   );
 };
