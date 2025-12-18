@@ -1,3 +1,4 @@
+import ContactSection from "@/components/ContactSection";
 import EdtechCTABanner from "@/components/EdtechCTABanner";
 import ExamplesSection from "@/components/ExamplesSection";
 import FeaturesGrid from "@/components/FeaturesGrid";
@@ -15,6 +16,7 @@ const Index = () => {
       <ExamplesSection />
       <FeaturesGrid />
       <EdtechCTABanner  />
+      <ContactSection />
     </>
   );
 };
