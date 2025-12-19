@@ -49,9 +49,9 @@ const features = [
 
 const FeaturesGrid: React.FC = () => {
   return (
-    <section className="w-full bg-[#F6FBFF] py-20 px-4">
-      <div className="mx-auto max-w-7xl">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+    <section id="guide" className="w-full bg-[#F6FBFF] py-20 px-4">
+      <div  className="mx-auto max-w-7xl">
+        <div   className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
           {features.map((item, index) => (
             <div
               key={index}
@@ -65,7 +65,7 @@ const FeaturesGrid: React.FC = () => {
               "
             >
               {/* Icon badge */}
-              <div className="mx-auto mb-5 flex h-[48px] w-[48px] items-center justify-center rounded-full bg-[#EAF6FF]">
+              <div  className="mx-auto mb-5 flex h-[48px] w-[48px] items-center justify-center rounded-full bg-[#EAF6FF]">
                 <item.icon
                   className={`
                     h-[24px] w-[24px]
