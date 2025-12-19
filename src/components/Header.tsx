@@ -49,7 +49,7 @@ const Header: React.FC = () => {
         <div className="md:hidden absolute top-[69px] left-0 w-full bg-white/95 backdrop-blur-md border-t border-[#B8E6FE]/50">
           <nav className="flex flex-col gap-4 p-6 text-[16px] text-[#364153] font-arimo">
             <a href="#">Creator</a>
-            <a href="#">Samples</a>
+            <a href="#examples">Samples</a>
             <a href="#">Prints</a>
             <a href="#">Guide</a>
             <a href="#">Install</a>
