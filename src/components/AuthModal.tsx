@@ -1,5 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { X } from "lucide-react";
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup,
+} from "firebase/auth";
+import { ref, set } from "firebase/database";
+import { auth, db } from "@/firebase";
 
 type AuthModalProps = {
   onClose?: () => void;
@@ -11,10 +19,83 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, mode }) => {
     mode ?? "login"
   );
 
-  // 🔁 Sync every time Header changes mode
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    repeatPassword: "",
+    location: "",
+    company: "",
+  });
+
   useEffect(() => {
     if (mode) setCurrentMode(mode);
   }, [mode]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setForm({ ...form, [e.target.placeholder.toLowerCase().replace(" ", "")]: e.target.value });
+  };
+
+  // 🔐 LOGIN
+  const handleLogin = async () => {
+    try {
+      await signInWithEmailAndPassword(auth, form.email, form.password);
+      onClose?.();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  // 📝 REGISTER
+  const handleRegister = async () => {
+    if (form.password !== form.repeatPassword) {
+      alert("Passwords do not match");
+      return;
+    }
+
+    try {
+      const res = await createUserWithEmailAndPassword(
+        auth,
+        form.email,
+        form.password
+      );
+
+      await set(ref(db, `users/${res.user.uid}`), {
+        uid: res.user.uid,
+        name: form.name,
+        email: form.email,
+        location: form.location,
+        company: form.company || "",
+        createdAt: Date.now(),
+        provider: "email",
+      });
+
+      onClose?.();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  // 🔵 GOOGLE AUTH
+  const handleGoogle = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      const res = await signInWithPopup(auth, provider);
+
+      await set(ref(db, `users/${res.user.uid}`), {
+        uid: res.user.uid,
+        name: res.user.displayName,
+        email: res.user.email,
+        photo: res.user.photoURL,
+        provider: "google",
+        createdAt: Date.now(),
+      });
+
+      onClose?.();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -25,20 +106,21 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, mode }) => {
           <h2 className="text-lg font-semibold text-gray-800">
             {currentMode === "login" ? "Log In" : "Register"}
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button onClick={onClose}>
             <X size={20} />
           </button>
         </div>
 
         {/* Google */}
-        <button className="flex w-full items-center justify-center gap-2 rounded-md border border-gray-300 py-2 text-sm hover:bg-gray-50">
+        <button
+          onClick={handleGoogle}
+          className="flex w-full items-center justify-center gap-2 rounded-md border py-2 text-sm hover:bg-gray-50"
+        >
           <img
             src="https://www.svgrepo.com/show/475656/google-color.svg"
             className="h-4 w-4"
           />
-          {currentMode === "login"
-            ? "Sign in with Google"
-            : "Sign up with Google"}
+          {currentMode === "login" ? "Sign in with Google" : "Sign up with Google"}
         </button>
 
         {/* Divider */}
@@ -50,53 +132,43 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, mode }) => {
 
         {/* Forms */}
         {currentMode === "login" ? (
-          <form className="space-y-3">
-            <input className="input" placeholder="Email" />
-            <input className="input" placeholder="Password" type="password" />
+          <div className="space-y-3">
+            <input className="input" placeholder="Email" onChange={handleChange} />
+            <input className="input" placeholder="Password" type="password" onChange={handleChange} />
 
-            <div className="text-right text-xs">
-              <a className="text-blue-500 hover:underline">Forgot password?</a>
-            </div>
-
-            <button className="w-full rounded-md bg-blue-500 py-2 text-white">
+            <button onClick={handleLogin} className="w-full rounded-md bg-blue-500 py-2 text-white">
               Log In
             </button>
-          </form>
+          </div>
         ) : (
-          <form className="space-y-3">
-            <input className="input" placeholder="Name" />
-            <input className="input" placeholder="Email" />
-            <input className="input" placeholder="Location" />
-            <input className="input" placeholder="Company name (optional)" />
-            <input className="input" placeholder="Password" type="password" />
-            <input className="input" placeholder="Repeat password" type="password" />
+          <div className="space-y-3">
+            <input className="input" placeholder="Name" onChange={handleChange} />
+            <input className="input" placeholder="Email" onChange={handleChange} />
+            <input className="input" placeholder="Location" onChange={handleChange} />
+            <input className="input" placeholder="Company" onChange={handleChange} />
+            <input className="input" placeholder="Password" type="password" onChange={handleChange} />
+            <input className="input" placeholder="Repeat Password" type="password" onChange={handleChange} />
 
-            <button className="w-full rounded-md bg-blue-500 py-2 text-white">
+            <button onClick={handleRegister} className="w-full rounded-md bg-blue-500 py-2 text-white">
               Register
             </button>
-          </form>
+          </div>
         )}
 
-        {/* Footer switch */}
+        {/* Switch */}
         <p className="mt-4 text-center text-xs text-gray-600">
           {currentMode === "login" ? (
             <>
               Don’t have an account?{" "}
-              <button
-                onClick={() => setCurrentMode("register")}
-                className="text-blue-500 hover:underline"
-              >
-                Sign up here
+              <button onClick={() => setCurrentMode("register")} className="text-blue-500">
+                Sign up
               </button>
             </>
           ) : (
             <>
               Already have an account?{" "}
-              <button
-                onClick={() => setCurrentMode("login")}
-                className="text-blue-500 hover:underline"
-              >
-                Login here
+              <button onClick={() => setCurrentMode("login")} className="text-blue-500">
+                Login
               </button>
             </>
           )}
