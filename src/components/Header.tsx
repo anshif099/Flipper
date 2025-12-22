@@ -11,8 +11,7 @@ const Header: React.FC = () => {
   const location = useLocation();
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
-    `font-arimo text-[16px] ${
-      isActive ? "text-[#0084D1] font-semibold" : "text-[#364153]"
+    `font-arimo text-[16px] ${isActive ? "text-[#0084D1] font-semibold" : "text-[#364153]"
     }`;
 
   const scrollToSection = (id: string) => {
@@ -91,10 +90,80 @@ const Header: React.FC = () => {
         </div>
       </header>
 
+      {/* MOBILE MENU */}
+      {open && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm md:hidden"
+            onClick={() => setOpen(false)}
+          />
+
+          {/* Menu */}
+          <div className="fixed left-0 right-0 top-[69px] z-40 bg-white shadow-lg md:hidden animate-in slide-in-from-top-2 duration-200">
+            <nav className="flex flex-col p-6 gap-4">
+              <NavLink
+                to="/Creator"
+                className={linkClass}
+                onClick={() => setOpen(false)}
+              >
+                Creator
+              </NavLink>
+
+              <button
+                onClick={() => scrollToSection("examples")}
+                className="font-arimo text-[16px] text-[#364153] text-left"
+              >
+                Samples
+              </button>
+
+              <NavLink
+                to="/Blog"
+                className={linkClass}
+                onClick={() => setOpen(false)}
+              >
+                Blog
+              </NavLink>
+
+              <button
+                onClick={() => scrollToSection("guide")}
+                className="font-arimo text-[16px] text-[#364153] text-left"
+              >
+                Guide
+              </button>
+
+              <div className="border-t border-gray-200 my-2" />
+
+              <button
+                onClick={() => {
+                  setAuthMode("register");
+                  setAuthOpen(true);
+                  setOpen(false);
+                }}
+                className="font-arimo text-[16px] text-[#364153] text-left"
+              >
+                Register
+              </button>
+
+              <button
+                onClick={() => {
+                  setAuthMode("login");
+                  setAuthOpen(true);
+                  setOpen(false);
+                }}
+                className="h-[36px] rounded-md bg-[#0099ff] px-3 text-white font-arimo"
+              >
+                Log in
+              </button>
+            </nav>
+          </div>
+        </>
+      )}
+
       {/* 🔥 AUTH MODAL (FIXED) */}
       {authOpen && (
         <AuthModal
-          mode={authMode}           
+          mode={authMode}
           onClose={() => setAuthOpen(false)}
         />
       )}
