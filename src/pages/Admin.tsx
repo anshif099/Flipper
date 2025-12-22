@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { ref, onValue, remove } from "firebase/database";
-import { auth, db } from "@/firebase";
+import { db } from "@/firebase";
 import { useNavigate } from "react-router-dom";
 import AdminUserRow from "@/components/AdminUserRow";
 import AdminEditModal from "@/components/AdminEditModal";
@@ -14,28 +14,23 @@ export type UserType = {
   provider: string;
 };
 
-const ADMIN_EMAIL = "admin@yourapp.com"; // 🔐 change this
-
 const Admin: React.FC = () => {
   const [users, setUsers] = useState<UserType[]>([]);
   const [selectedUser, setSelectedUser] = useState<UserType | null>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const navigate = useNavigate();
 
-  // 🔐 Admin auth check
+  // 🔐 ADMIN AUTH CHECK (LOCAL ONLY)
   useEffect(() => {
-    const unsub = auth.onAuthStateChanged((user) => {
-      if (!user || user.email !== ADMIN_EMAIL) {
-        navigate("/admin-login");
-      } else {
-        setCheckingAuth(false);
-      }
-    });
-
-    return () => unsub();
+    const isAdmin = localStorage.getItem("isAdmin");
+    if (!isAdmin) {
+      navigate("/admin-login");
+    } else {
+      setCheckingAuth(false);
+    }
   }, [navigate]);
 
-  // 🔁 Load users
+  // 🔁 LOAD USERS
   useEffect(() => {
     if (checkingAuth) return;
 
@@ -79,7 +74,7 @@ const Admin: React.FC = () => {
 
           <button
             onClick={() => {
-              auth.signOut();
+              localStorage.removeItem("isAdmin");
               navigate("/admin-login");
             }}
             className="text-sm text-red-500 hover:underline"

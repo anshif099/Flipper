@@ -1,43 +1,35 @@
 import React, { useState } from "react";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/firebase";
 import { useNavigate } from "react-router-dom";
 
-const ADMIN_EMAIL = "admin@yourapp.com"; // 🔐 change this
+const ADMIN_EMAIL = "admin@flipbook.com";
+const ADMIN_PASSWORD = "Admin@123";
 
 const AdminLogin: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  const loginAdmin = async () => {
-    try {
-      setLoading(true);
-      const res = await signInWithEmailAndPassword(auth, email, password);
-
-      // 🔒 Verify admin email
-      if (res.user.email !== ADMIN_EMAIL) {
-        alert("Not authorized as admin");
-        await auth.signOut();
-        return;
-      }
-
+  const loginAdmin = () => {
+    if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+      localStorage.setItem("isAdmin", "true");
       navigate("/admin");
-    } catch (err: any) {
-      alert(err.message);
-    } finally {
-      setLoading(false);
+    } else {
+      setError("Invalid admin email or password");
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f6fbff]">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-lg">
 
-        <h2 className="mb-4 text-xl font-semibold text-center">
+        <h2 className="mb-4 text-center text-xl font-semibold">
           Admin Login
         </h2>
+
+        {error && (
+          <p className="mb-3 text-sm text-red-500">{error}</p>
+        )}
 
         <div className="space-y-3">
           <input
@@ -57,10 +49,9 @@ const AdminLogin: React.FC = () => {
 
           <button
             onClick={loginAdmin}
-            disabled={loading}
-            className="w-full rounded-md bg-blue-500 py-2 text-white disabled:opacity-60"
+            className="w-full rounded-md bg-blue-500 py-2 text-white"
           >
-            {loading ? "Logging in..." : "Login"}
+            Login
           </button>
         </div>
       </div>
