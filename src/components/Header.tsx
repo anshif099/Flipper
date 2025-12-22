@@ -1,17 +1,30 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
+import { onAuthStateChanged, signOut, User } from "firebase/auth";
+import { auth } from "@/firebase";
 import logo from "@/assets/logo.png";
-import AuthModal from "@/components/AuthModal"; // 👈 import modal
+import AuthModal from "@/components/AuthModal";
 
 const Header: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
+  const [user, setUser] = useState<User | null>(null);
 
   const location = useLocation();
 
+  // 🔐 Listen to auth state
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+
+    return () => unsub();
+  }, []);
+
   const linkClass = ({ isActive }: { isActive: boolean }) =>
-    `font-arimo text-[16px] ${isActive ? "text-[#0084D1] font-semibold" : "text-[#364153]"
+    `font-arimo text-[16px] ${
+      isActive ? "text-[#0084D1] font-semibold" : "text-[#364153]"
     }`;
 
   const scrollToSection = (id: string) => {
@@ -23,6 +36,10 @@ const Header: React.FC = () => {
     const el = document.getElementById(id);
     if (el) el.scrollIntoView({ behavior: "smooth" });
     setOpen(false);
+  };
+
+  const handleLogout = async () => {
+    await signOut(auth);
   };
 
   return (
@@ -59,28 +76,48 @@ const Header: React.FC = () => {
 
           {/* RIGHT */}
           <div className="ml-auto hidden md:flex items-center gap-4">
-            <button
-              onClick={() => {
-                setAuthMode("register");
-                setAuthOpen(true);
-              }}
-              className="font-arimo text-[16px] text-[#364153]"
-            >
-              Register
-            </button>
 
-            <button
-              onClick={() => {
-                setAuthMode("login");
-                setAuthOpen(true);
-              }}
-              className="h-[36px] rounded-md bg-[#0099ff] px-3 text-white"
-            >
-              Log in
-            </button>
+            {/* 👤 LOGGED IN */}
+            {user ? (
+              <>
+                <span className="font-arimo text-[15px] text-[#364153]">
+                  Hi, {user.displayName || user.email?.split("@")[0]}
+                </span>
+
+                <button
+                  onClick={handleLogout}
+                  className="h-[36px] rounded-md border border-red-500 px-3 text-red-500"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                {/* ❌ NOT LOGGED IN */}
+                <button
+                  onClick={() => {
+                    setAuthMode("register");
+                    setAuthOpen(true);
+                  }}
+                  className="font-arimo text-[16px] text-[#364153]"
+                >
+                  Register
+                </button>
+
+                <button
+                  onClick={() => {
+                    setAuthMode("login");
+                    setAuthOpen(true);
+                  }}
+                  className="h-[36px] rounded-md bg-[#0099ff] px-3 text-white"
+                >
+                  Log in
+                </button>
+              </>
+            )}
           </div>
 
-          {/* MOBILE */}
+          {/* MOBILE TOGGLE */}
           <button
             onClick={() => setOpen(!open)}
             className="ml-auto md:hidden"
@@ -93,20 +130,15 @@ const Header: React.FC = () => {
       {/* MOBILE MENU */}
       {open && (
         <>
-          {/* Backdrop */}
           <div
             className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm md:hidden"
             onClick={() => setOpen(false)}
           />
 
-          {/* Menu */}
-          <div className="fixed left-0 right-0 top-[69px] z-40 bg-white shadow-lg md:hidden animate-in slide-in-from-top-2 duration-200">
+          <div className="fixed left-0 right-0 top-[69px] z-40 bg-white shadow-lg md:hidden">
             <nav className="flex flex-col p-6 gap-4">
-              <NavLink
-                to="/Creator"
-                className={linkClass}
-                onClick={() => setOpen(false)}
-              >
+
+              <NavLink to="/Creator" className={linkClass} onClick={() => setOpen(false)}>
                 Creator
               </NavLink>
 
@@ -117,11 +149,7 @@ const Header: React.FC = () => {
                 Samples
               </button>
 
-              <NavLink
-                to="/Blog"
-                className={linkClass}
-                onClick={() => setOpen(false)}
-              >
+              <NavLink to="/Blog" className={linkClass} onClick={() => setOpen(false)}>
                 Blog
               </NavLink>
 
@@ -132,35 +160,51 @@ const Header: React.FC = () => {
                 Guide
               </button>
 
-              <div className="border-t border-gray-200 my-2" />
+              <div className="border-t my-2" />
 
-              <button
-                onClick={() => {
-                  setAuthMode("register");
-                  setAuthOpen(true);
-                  setOpen(false);
-                }}
-                className="font-arimo text-[16px] text-[#364153] text-left"
-              >
-                Register
-              </button>
+              {user ? (
+                <>
+                  <span className="text-sm text-gray-600">
+                    Logged in as {user.displayName || user.email}
+                  </span>
+                  <button
+                    onClick={handleLogout}
+                    className="text-left text-red-500"
+                  >
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => {
+                      setAuthMode("register");
+                      setAuthOpen(true);
+                      setOpen(false);
+                    }}
+                    className="font-arimo text-[16px] text-left text-[#364153]"
+                  >
+                    Register
+                  </button>
 
-              <button
-                onClick={() => {
-                  setAuthMode("login");
-                  setAuthOpen(true);
-                  setOpen(false);
-                }}
-                className="h-[36px] rounded-md bg-[#0099ff] px-3 text-white font-arimo"
-              >
-                Log in
-              </button>
+                  <button
+                    onClick={() => {
+                      setAuthMode("login");
+                      setAuthOpen(true);
+                      setOpen(false);
+                    }}
+                    className="h-[36px] rounded-md bg-[#0099ff] px-3 text-white font-arimo"
+                  >
+                    Log in
+                  </button>
+                </>
+              )}
             </nav>
           </div>
         </>
       )}
 
-      {/* 🔥 AUTH MODAL (FIXED) */}
+      {/* AUTH MODAL */}
       {authOpen && (
         <AuthModal
           mode={authMode}

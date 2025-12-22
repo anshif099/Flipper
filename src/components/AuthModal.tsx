@@ -32,8 +32,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, mode }) => {
     if (mode) setCurrentMode(mode);
   }, [mode]);
 
+  // ✅ FIXED INPUT HANDLER
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.placeholder.toLowerCase().replace(" ", "")]: e.target.value });
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
   };
 
   // 🔐 LOGIN
@@ -66,8 +68,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, mode }) => {
         email: form.email,
         location: form.location,
         company: form.company || "",
-        createdAt: Date.now(),
         provider: "email",
+        createdAt: Date.now(),
       });
 
       onClose?.();
@@ -120,7 +122,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, mode }) => {
             src="https://www.svgrepo.com/show/475656/google-color.svg"
             className="h-4 w-4"
           />
-          {currentMode === "login" ? "Sign in with Google" : "Sign up with Google"}
+          {currentMode === "login"
+            ? "Sign in with Google"
+            : "Sign up with Google"}
         </button>
 
         {/* Divider */}
@@ -133,23 +137,72 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, mode }) => {
         {/* Forms */}
         {currentMode === "login" ? (
           <div className="space-y-3">
-            <input className="input" placeholder="Email" onChange={handleChange} />
-            <input className="input" placeholder="Password" type="password" onChange={handleChange} />
+            <input
+              className="input"
+              name="email"
+              placeholder="Email"
+              onChange={handleChange}
+            />
+            <input
+              className="input"
+              name="password"
+              type="password"
+              placeholder="Password"
+              onChange={handleChange}
+            />
 
-            <button onClick={handleLogin} className="w-full rounded-md bg-blue-500 py-2 text-white">
+            <button
+              onClick={handleLogin}
+              className="w-full rounded-md bg-blue-500 py-2 text-white"
+            >
               Log In
             </button>
           </div>
         ) : (
           <div className="space-y-3">
-            <input className="input" placeholder="Name" onChange={handleChange} />
-            <input className="input" placeholder="Email" onChange={handleChange} />
-            <input className="input" placeholder="Location" onChange={handleChange} />
-            <input className="input" placeholder="Company" onChange={handleChange} />
-            <input className="input" placeholder="Password" type="password" onChange={handleChange} />
-            <input className="input" placeholder="Repeat Password" type="password" onChange={handleChange} />
+            <input
+              className="input"
+              name="name"
+              placeholder="Name"
+              onChange={handleChange}
+            />
+            <input
+              className="input"
+              name="email"
+              placeholder="Email"
+              onChange={handleChange}
+            />
+            <input
+              className="input"
+              name="location"
+              placeholder="Location"
+              onChange={handleChange}
+            />
+            <input
+              className="input"
+              name="company"
+              placeholder="Company"
+              onChange={handleChange}
+            />
+            <input
+              className="input"
+              name="password"
+              type="password"
+              placeholder="Password"
+              onChange={handleChange}
+            />
+            <input
+              className="input"
+              name="repeatPassword"
+              type="password"
+              placeholder="Repeat Password"
+              onChange={handleChange}
+            />
 
-            <button onClick={handleRegister} className="w-full rounded-md bg-blue-500 py-2 text-white">
+            <button
+              onClick={handleRegister}
+              className="w-full rounded-md bg-blue-500 py-2 text-white"
+            >
               Register
             </button>
           </div>
@@ -160,14 +213,20 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, mode }) => {
           {currentMode === "login" ? (
             <>
               Don’t have an account?{" "}
-              <button onClick={() => setCurrentMode("register")} className="text-blue-500">
+              <button
+                onClick={() => setCurrentMode("register")}
+                className="text-blue-500"
+              >
                 Sign up
               </button>
             </>
           ) : (
             <>
               Already have an account?{" "}
-              <button onClick={() => setCurrentMode("login")} className="text-blue-500">
+              <button
+                onClick={() => setCurrentMode("login")}
+                className="text-blue-500"
+              >
                 Login
               </button>
             </>
