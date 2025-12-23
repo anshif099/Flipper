@@ -13,12 +13,13 @@ type Blog = {
   id: string;
   title: string;
   author: string;
-  coverUrl?: string;
+  coverUrl: string; // 🔥 REQUIRED
   createdAt: number;
   likes: number;
   views: number;
   pages: number;
 };
+
 
 const BlogViewerPage: React.FC = () => {
   const [blogs, setBlogs] = useState<Blog[]>([]);
