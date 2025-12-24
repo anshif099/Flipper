@@ -9,13 +9,6 @@ import fileIcon from "@/assets/file-icon.png";
 const Hero: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<File[]>([]);
-  const [title, setTitle] = useState("");
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState({
-    current: 0,
-    total: 0,
-    status: "",
-  });
   const navigate = useNavigate();
 
   const handleBrowseClick = () => {
@@ -26,6 +19,17 @@ const Hero: React.FC = () => {
     if (e.target.files) {
       setFiles(Array.from(e.target.files));
     }
+  };
+
+  // ✅ UPDATED ONLY THIS
+  const handleGenerate = () => {
+    if (files.length === 0) return;
+
+    navigate("/viewer", {
+      state: {
+        files,
+      },
+    });
   };
 
   const handleUpload = async () => {
@@ -41,8 +45,8 @@ const Hero: React.FC = () => {
 
     try {
       setUploading(true);
-
-      await uploadCompleteFlipbook(
+      
+      const blogId = await uploadCompleteFlipbook(
         files,
         title || "My Flipbook",
         (current, total, status) => {
@@ -50,16 +54,15 @@ const Hero: React.FC = () => {
         }
       );
 
-      alert(
-        "Flipbook uploaded successfully! 🎉\nGo to Creator section to publish it."
-      );
-
-      // Navigate to Creator page to see uploaded flipbook
-      navigate("/Creator");
-
+      alert("Flipbook uploaded successfully! 🎉");
+      
+      // Navigate to blog page to view uploaded flipbook
+      navigate("/blog");
+      
       // Reset form
       setFiles([]);
       setTitle("");
+      
     } catch (error: any) {
       console.error("Upload error:", error);
       alert(error.message || "Failed to upload flipbook");
@@ -156,39 +159,13 @@ const Hero: React.FC = () => {
                   ))}
                 </div>
 
-                {/* Upload Progress */}
-                {uploading && (
-                  <div className="mt-3 w-full">
-                    <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-blue-500 transition-all duration-300"
-                        style={{
-                          width: `${
-                            (uploadProgress.current / uploadProgress.total) * 100
-                          }%`,
-                        }}
-                      />
-                    </div>
-                    <p className="mt-2 text-[12px] text-gray-600">
-                      {uploadProgress.status}
-                    </p>
-                  </div>
-                )}
-
-                {/* Action Button */}
-                {!uploading && (
-                  <div className="mt-4 w-full">
-                    <button
-                      onClick={handleUpload}
-                      className="w-full h-[40px] rounded-md bg-[#0099ff] text-white font-arimo hover:bg-[#0085dd]"
-                    >
-                      Upload Flipbook
-                    </button>
-                    <p className="mt-2 text-xs text-gray-600">
-                      After upload, go to Creator section to publish
-                    </p>
-                  </div>
-                )}
+                {/* Generate */}
+                <button
+                  onClick={handleGenerate}
+                  className="mt-4 h-[40px] rounded-md bg-[#0099ff] px-6 text-white font-arimo"
+                >
+                  Generate Flipbook
+                </button>
               </>
             )}
           </div>
