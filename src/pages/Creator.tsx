@@ -1,15 +1,14 @@
 import CreatorHero from "@/components/CreatorHero";
-import FlipbookViewer from "@/components/FlipbookViewer";
+import MyFlipbooks from "@/components/MyFlipbook";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
-
 
 const Index = () => {
   return (
     <>
       <Header />
-      <CreatorHero  />
-      <FlipbookViewer   />
+      <CreatorHero />
+      <MyFlipbooks />
       <Footer />
     </>
   );
