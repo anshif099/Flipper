@@ -1,5 +1,7 @@
 import React, { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { auth } from "@/firebase";
+import { uploadCompleteFlipbook } from "@/utils/flipbookUpload";
 import heroBg from "@/assets/hero-bg.jpg";
 import uploadArrow from "@/assets/upload.jpg";
 import fileIcon from "@/assets/file-icon.png";
@@ -7,6 +9,9 @@ import fileIcon from "@/assets/file-icon.png";
 const Hero: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<File[]>([]);
+  const [title, setTitle] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, status: "" });
   const navigate = useNavigate();
 
   const handleBrowseClick = () => {
@@ -19,15 +24,61 @@ const Hero: React.FC = () => {
     }
   };
 
-  // ✅ UPDATED ONLY THIS
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (files.length === 0) return;
 
+    if (!auth.currentUser) {
+      alert("Please login first to create flipbooks");
+      return;
+    }
+
+    // For quick preview (local viewing without upload)
     navigate("/viewer", {
       state: {
         files,
+        title: title || "My Flipbook",
       },
     });
+  };
+
+  const handleUpload = async () => {
+    if (files.length === 0) {
+      alert("Please select files first");
+      return;
+    }
+
+    if (!auth.currentUser) {
+      alert("Please login to upload flipbooks");
+      return;
+    }
+
+    try {
+      setUploading(true);
+      
+      const blogId = await uploadCompleteFlipbook(
+        files,
+        title || "My Flipbook",
+        (current, total, status) => {
+          setUploadProgress({ current, total, status });
+        }
+      );
+
+      alert("Flipbook uploaded successfully! 🎉");
+      
+      // Navigate to blog page to view uploaded flipbook
+      navigate("/blog");
+      
+      // Reset form
+      setFiles([]);
+      setTitle("");
+      
+    } catch (error: any) {
+      console.error("Upload error:", error);
+      alert(error.message || "Failed to upload flipbook");
+    } finally {
+      setUploading(false);
+      setUploadProgress({ current: 0, total: 0, status: "" });
+    }
   };
 
   return (
@@ -35,12 +86,9 @@ const Hero: React.FC = () => {
       className="relative w-full h-[100vh] bg-cover bg-center"
       style={{ backgroundImage: `url(${heroBg})` }}
     >
-      {/* Dark overlay */}
       <div className="absolute inset-0 bg-black/60" />
 
-      {/* Content */}
       <div className="pt-20 relative z-10 flex h-full flex-col items-center justify-center px-6 text-center text-white">
-
         <h1 className="font-bold w-full md:w-[610px] font-arimo text-[32px] md:text-[60px] leading-[38px] md:leading-[60px]">
           FLIPBOOK MAKER
         </h1>
@@ -57,7 +105,6 @@ const Hero: React.FC = () => {
         {/* Upload Box */}
         <div className="w-full md:w-[585.59px] bg-white rounded-[16px] border border-black/10 px-5 md:pt-[33.21px] md:px-[33.21px] py-8">
           <div className="flex flex-col items-center text-center">
-
             {/* Icon */}
             <div className="flex items-center justify-center h-[60px] w-[60px] md:h-[72px] md:w-[72px] rounded-full bg-[#00A6F4]">
               <img
@@ -66,6 +113,16 @@ const Hero: React.FC = () => {
                 className="w-[32px] h-[32px] md:w-[40px] md:h-[40px]"
               />
             </div>
+
+            {/* Title Input */}
+            <input
+              type="text"
+              placeholder="Flipbook Title (optional)"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="mt-3 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800 outline-none focus:border-blue-500"
+              disabled={uploading}
+            />
 
             {/* Title */}
             <p className="mb-[16px] pt-3 text-[14px] md:text-[16px] font-arimo text-black">
@@ -81,6 +138,7 @@ const Hero: React.FC = () => {
             <button
               onClick={handleBrowseClick}
               className="flex items-center gap-[6px] text-[14px] md:text-[16px] font-arimo text-[#0A0A0A] hover:underline"
+              disabled={uploading}
             >
               <img src={fileIcon} alt="File icon" width={16} height={16} />
               Browse Files
@@ -94,6 +152,7 @@ const Hero: React.FC = () => {
               multiple
               className="hidden"
               onChange={handleFileChange}
+              disabled={uploading}
             />
 
             {/* Selected files info */}
@@ -109,16 +168,43 @@ const Hero: React.FC = () => {
                   ))}
                 </div>
 
-                {/* Generate */}
-                <button
-                  onClick={handleGenerate}
-                  className="mt-4 h-[40px] rounded-md bg-[#0099ff] px-6 text-white font-arimo"
-                >
-                  Generate Flipbook
-                </button>
+                {/* Upload Progress */}
+                {uploading && (
+                  <div className="mt-3 w-full">
+                    <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-blue-500 transition-all duration-300"
+                        style={{
+                          width: `${(uploadProgress.current / uploadProgress.total) * 100}%`,
+                        }}
+                      />
+                    </div>
+                    <p className="mt-2 text-[12px] text-gray-600">
+                      {uploadProgress.status}
+                    </p>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                {!uploading && (
+                  <div className="mt-4 flex gap-3 w-full">
+                    <button
+                      onClick={handleGenerate}
+                      className="flex-1 h-[40px] rounded-md bg-gray-500 text-white font-arimo hover:bg-gray-600"
+                    >
+                      Preview
+                    </button>
+                    
+                    <button
+                      onClick={handleUpload}
+                      className="flex-1 h-[40px] rounded-md bg-[#0099ff] text-white font-arimo hover:bg-[#0085dd]"
+                    >
+                      Upload & Publish
+                    </button>
+                  </div>
+                )}
               </>
             )}
-
           </div>
         </div>
       </div>
