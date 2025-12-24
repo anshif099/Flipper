@@ -3,25 +3,27 @@ export const uploadToCloudinary = async (
   userId: string,
   flipbookId: string
 ): Promise<string> => {
+
   const formData = new FormData();
   formData.append("file", file);
   formData.append("upload_preset", "flipper_uploads");
-
-  // ✅ PATH / FOLDER STRUCTURE
   formData.append("folder", `flipper/${userId}/${flipbookId}`);
+  formData.append("resource_type", "auto"); // 🔥 important
 
   const res = await fetch(
-    "https://api.cloudinary.com/v1_1/ddjp8jpcs/image/upload",
+    "https://api.cloudinary.com/v1_1/dfd2y6oeb/auto/upload",
     {
       method: "POST",
       body: formData,
     }
   );
 
+  const data = await res.json();
+
   if (!res.ok) {
-    throw new Error("Cloudinary upload failed");
+    console.error("Cloudinary error:", data);
+    throw new Error(data.error?.message || "Cloudinary upload failed");
   }
 
-  const data = await res.json();
-  return data.secure_url; // 👈 store this
+  return data.secure_url;
 };

@@ -4,7 +4,7 @@ export const uploadToCloudinary = async (file) => {
   formData.append("upload_preset", "flipper_uploads");
 
   const response = await fetch(
-    "https://api.cloudinary.com/v1_1/ddjp8jpcs/image/upload",
+    "https://api.cloudinary.com/v1_1/dfd2y6oeb/image/upload",
     {
       method: "POST",
       body: formData,
