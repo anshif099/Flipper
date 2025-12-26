@@ -26,12 +26,13 @@ const BlogViewerPage: React.FC = () => {
 
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [activeBlog, setActiveBlog] = useState<Blog | null>(null);
-  const [currentPageIndex, setCurrentPageIndex] = useState(0); // ✅ Track current page
+  const [selectedBlogId, setSelectedBlogId] = useState<string | null>(null);
+  const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // =============================
-  // FETCH ONLY PUBLISHED BLOGS
+  // FETCH PUBLISHED BLOGS
   // =============================
   useEffect(() => {
     const blogRef = ref(db, "blogs");
@@ -59,11 +60,12 @@ const BlogViewerPage: React.FC = () => {
             views: v.views || 0,
             published: v.published || false,
           }))
-          .filter((blog) => blog.published === true) // ✅ Only show published
+          .filter((b) => b.published)
           .reverse();
 
         setBlogs(list);
         setActiveBlog((prev) => prev ?? list[0]);
+        setSelectedBlogId((prev) => prev ?? list[0]?.id);
         setLoading(false);
       },
       () => {
@@ -76,17 +78,18 @@ const BlogViewerPage: React.FC = () => {
   }, []);
 
   // =============================
-  // ACTIVE INDEX
+  // CARD CLICK LOGIC (IMPORTANT)
   // =============================
-  const activeIndex = blogs.findIndex((b) => b.id === activeBlog?.id);
+  const handleBlogClick = async (blog: Blog) => {
+    // FIRST CLICK → preview only
+    if (selectedBlogId !== blog.id) {
+      setSelectedBlogId(blog.id);
+      setActiveBlog(blog);
+      setCurrentPageIndex(0);
+      return;
+    }
 
-  // =============================
-  // HANDLERS
-  // =============================
-  const openBlog = async (blog: Blog) => {
-    setActiveBlog(blog);
-    setCurrentPageIndex(0); // ✅ Reset to first page when opening new flipbook
-
+    // SECOND CLICK → open viewer
     await update(ref(db, `blogs/${blog.id}`), {
       views: increment(1),
     });
@@ -94,15 +97,21 @@ const BlogViewerPage: React.FC = () => {
     navigate(`/viewer?id=${blog.id}`);
   };
 
+  // =============================
+  // PREVIEW CONTROLS
+  // =============================
   const goToPrevious = () => {
     if (currentPageIndex > 0) {
-      setCurrentPageIndex(currentPageIndex - 1);
+      setCurrentPageIndex((p) => p - 1);
     }
   };
 
   const goToNext = () => {
-    if (activeBlog && currentPageIndex < activeBlog.pageUrls.length - 1) {
-      setCurrentPageIndex(currentPageIndex + 1);
+    if (
+      activeBlog &&
+      currentPageIndex < activeBlog.pageUrls.length - 1
+    ) {
+      setCurrentPageIndex((p) => p + 1);
     }
   };
 
@@ -126,10 +135,7 @@ const BlogViewerPage: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0099ff] mx-auto mb-4" />
-          <p className="text-gray-600">Loading flipbooks...</p>
-        </div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0099ff]" />
       </div>
     );
   }
@@ -142,15 +148,10 @@ const BlogViewerPage: React.FC = () => {
     );
   }
 
-  if (blogs.length === 0) {
+  if (!blogs.length) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-600 mb-4">No published flipbooks yet</p>
-          <a href="/" className="text-[#0099ff] hover:underline">
-            Create your first flipbook
-          </a>
-        </div>
+        No published flipbooks yet
       </div>
     );
   }
@@ -160,50 +161,50 @@ const BlogViewerPage: React.FC = () => {
   // =============================
   return (
     <div className="min-h-screen bg-[#f6fbff] px-4 md:px-6 lg:px-10 py-8">
-      <div className="mx-auto flex flex-col lg:flex-row max-w-[1400px] gap-6 lg:gap-10">
+      <div className="mx-auto flex flex-col lg:flex-row max-w-[1400px] gap-8">
+
         {/* LEFT PREVIEW */}
         <div className="w-full lg:w-[380px] flex-shrink-0">
-          <div className="rounded-2xl bg-[#eaf3ff] p-4 md:p-6 shadow-lg">
-            <div className="rounded-xl bg-white p-4 md:p-6 text-center shadow-sm">
-              <p className="text-[13px] text-gray-500 mb-3">
+          <div className="rounded-2xl bg-[#eaf3ff] p-6 shadow-lg">
+            <div className="rounded-xl bg-white p-6 text-center">
+              <p className="text-sm text-gray-600 mb-3">
                 {activeBlog?.title}
               </p>
 
-              <div className="mx-auto h-[220px] w-[160px] bg-gray-200 rounded-md mb-4 overflow-hidden">
-                {activeBlog?.pageUrls?.[currentPageIndex] && (
+              <div className="mx-auto h-[220px] w-[160px] bg-gray-200 rounded-md overflow-hidden mb-4">
+                {activeBlog?.pageUrls[currentPageIndex] && (
                   <img
                     src={activeBlog.pageUrls[currentPageIndex]}
                     className="w-full h-full object-cover"
-                    alt={`${activeBlog.title} - Page ${currentPageIndex + 1}`}
                   />
                 )}
               </div>
 
-              <p className="text-[12px] text-gray-500">
+              <p className="text-xs text-gray-500">
                 Page {currentPageIndex + 1} of {activeBlog?.pageUrls.length}
               </p>
 
-              <div className="mt-3 text-[13px] text-gray-600">
+              <div className="mt-3 text-sm text-gray-600">
                 {activeBlog?.author}
               </div>
             </div>
 
-            {/* PREV / NEXT */}
             <div className="mt-6 flex justify-between gap-2">
               <button
                 onClick={goToPrevious}
-                disabled={currentPageIndex <= 0 || !activeBlog}
-                className="flex items-center gap-1 rounded-md bg-[#007bff] px-3 md:px-4 py-1.5 text-white text-[12px]
-                           disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={currentPageIndex === 0}
+                className="bg-[#007bff] text-white px-4 py-1.5 rounded-md text-sm disabled:opacity-50"
               >
                 <ChevronLeft size={14} /> Previous
               </button>
 
               <button
                 onClick={goToNext}
-                disabled={!activeBlog || currentPageIndex >= (activeBlog?.pageUrls.length || 0) - 1}
-                className="flex items-center gap-1 rounded-md bg-[#007bff] px-3 md:px-4 py-1.5 text-white text-[12px]
-                           disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={
+                  !activeBlog ||
+                  currentPageIndex >= activeBlog.pageUrls.length - 1
+                }
+                className="bg-[#007bff] text-white px-4 py-1.5 rounded-md text-sm disabled:opacity-50"
               >
                 Next <ChevronRight size={14} />
               </button>
@@ -213,60 +214,49 @@ const BlogViewerPage: React.FC = () => {
 
         {/* RIGHT GRID */}
         <div className="flex-1">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 md:gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {blogs.map((blog) => (
               <div
                 key={blog.id}
-                id={`blog-${blog.id}`}
-                onClick={() => openBlog(blog)}
-                className={`cursor-pointer rounded-2xl bg-white shadow-md border overflow-hidden transition-all ${
-                  activeBlog?.id === blog.id
-                    ? 'ring-2 ring-[#0099ff] shadow-xl'
-                    : 'hover:shadow-lg'
+                onClick={() => handleBlogClick(blog)}
+                className={`cursor-pointer rounded-2xl bg-white shadow-md border transition-all ${
+                  selectedBlogId === blog.id
+                    ? "ring-2 ring-[#0099ff]"
+                    : "hover:shadow-lg"
                 }`}
               >
-                <div className="h-[200px] sm:h-[260px] bg-gray-200 overflow-hidden">
-                  {blog.pageUrls?.[0] && (
+                <div className="h-[240px] bg-gray-200 overflow-hidden">
+                  {blog.pageUrls[0] && (
                     <img
                       src={blog.pageUrls[0]}
-                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                      alt={blog.title}
+                      className="w-full h-full object-cover hover:scale-105 transition"
                     />
                   )}
                 </div>
 
-                <div className="p-4 md:p-5">
-                  <h3 className="text-[15px] md:text-[16px] font-semibold mb-2 md:mb-3 line-clamp-1">
+                <div className="p-4">
+                  <h3 className="font-semibold mb-1 line-clamp-1">
                     {blog.title}
                   </h3>
+                  <p className="text-sm text-gray-600">{blog.author}</p>
 
-                  <div className="text-sm text-gray-700 mb-2">
-                    {blog.author}
-                  </div>
-
-                  <p className="text-xs text-gray-500 mb-3 md:mb-4">
-                    {new Date(blog.createdAt).toDateString()}
-                  </p>
-
-                  <div className="relative border-t pt-3 text-gray-500">
+                  <div className="relative border-t mt-3 pt-3 text-gray-500">
                     <div
                       onClick={(e) => likeBlog(e, blog)}
-                      className="absolute left-0 top-3 flex gap-1 cursor-pointer hover:text-red-500"
+                      className="absolute left-0 top-3 flex gap-1 hover:text-red-500"
                     >
-                      <Heart size={16} className="md:w-[18px] md:h-[18px]" /> 
-                      <span className="text-xs md:text-sm">{blog.likes}</span>
+                      <Heart size={16} /> {blog.likes}
                     </div>
 
                     <div className="flex justify-center gap-1">
-                      <Eye size={16} className="md:w-[18px] md:h-[18px]" /> 
-                      <span className="text-xs md:text-sm">{blog.views}</span>
+                      <Eye size={16} /> {blog.views}
                     </div>
 
                     <div
                       onClick={(e) => shareBlog(e, blog.id)}
-                      className="absolute right-0 top-3 cursor-pointer hover:text-blue-500"
+                      className="absolute right-0 top-3 hover:text-blue-500"
                     >
-                      <Share2 size={16} className="md:w-[18px] md:h-[18px]" />
+                      <Share2 size={16} />
                     </div>
                   </div>
                 </div>
@@ -274,6 +264,7 @@ const BlogViewerPage: React.FC = () => {
             ))}
           </div>
         </div>
+
       </div>
     </div>
   );
