@@ -7,8 +7,15 @@ import {
   Eye,
   Share2,
 } from "lucide-react";
-import { ref, onValue, update, increment } from "firebase/database";
-import { db } from "@/firebase";
+import {
+  ref,
+  onValue,
+  update,
+  increment,
+  get,
+  child,
+} from "firebase/database";
+import { auth, db } from "@/firebase";
 
 type Blog = {
   id: string;
@@ -19,10 +26,12 @@ type Blog = {
   likes: number;
   views: number;
   published: boolean;
+  likedBy?: Record<string, boolean>;
 };
 
 const BlogViewerPage: React.FC = () => {
   const navigate = useNavigate();
+  const user = auth.currentUser;
 
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [activeBlog, setActiveBlog] = useState<Blog | null>(null);
@@ -59,6 +68,7 @@ const BlogViewerPage: React.FC = () => {
             likes: v.likes || 0,
             views: v.views || 0,
             published: v.published || false,
+            likedBy: v.likedBy || {},
           }))
           .filter((b) => b.published)
           .reverse();
@@ -78,10 +88,9 @@ const BlogViewerPage: React.FC = () => {
   }, []);
 
   // =============================
-  // CARD CLICK LOGIC (IMPORTANT)
+  // CARD CLICK (PREVIEW / OPEN)
   // =============================
   const handleBlogClick = async (blog: Blog) => {
-    // FIRST CLICK → preview only
     if (selectedBlogId !== blog.id) {
       setSelectedBlogId(blog.id);
       setActiveBlog(blog);
@@ -89,7 +98,6 @@ const BlogViewerPage: React.FC = () => {
       return;
     }
 
-    // SECOND CLICK → open viewer
     await update(ref(db, `blogs/${blog.id}`), {
       views: increment(1),
     });
@@ -115,11 +123,37 @@ const BlogViewerPage: React.FC = () => {
     }
   };
 
-  const likeBlog = async (e: React.MouseEvent, blog: Blog) => {
+  // =============================
+  // LIKE TOGGLE (PER USER)
+  // =============================
+  const toggleLike = async (e: React.MouseEvent, blog: Blog) => {
     e.stopPropagation();
-    await update(ref(db, `blogs/${blog.id}`), {
-      likes: increment(1),
-    });
+
+    if (!user) {
+      alert("Login required to like");
+      return;
+    }
+
+    const uid = user.uid;
+    const blogRef = ref(db, `blogs/${blog.id}`);
+    const likedRef = child(blogRef, `likedBy/${uid}`);
+
+    const snap = await get(likedRef);
+    const alreadyLiked = snap.exists();
+
+    if (alreadyLiked) {
+      // UNLIKE
+      await update(blogRef, {
+        [`likedBy/${uid}`]: null,
+        likes: increment(-1),
+      });
+    } else {
+      // LIKE
+      await update(blogRef, {
+        [`likedBy/${uid}`]: true,
+        likes: increment(1),
+      });
+    }
   };
 
   const shareBlog = (e: React.MouseEvent, blogId: string) => {
@@ -148,14 +182,6 @@ const BlogViewerPage: React.FC = () => {
     );
   }
 
-  if (!blogs.length) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        No published flipbooks yet
-      </div>
-    );
-  }
-
   // =============================
   // MAIN UI
   // =============================
@@ -164,7 +190,7 @@ const BlogViewerPage: React.FC = () => {
       <div className="mx-auto flex flex-col lg:flex-row max-w-[1400px] gap-8">
 
         {/* LEFT PREVIEW */}
-        <div className="w-full lg:w-[380px] flex-shrink-0">
+        <div className="w-full lg:w-[380px]">
           <div className="rounded-2xl bg-[#eaf3ff] p-6 shadow-lg">
             <div className="rounded-xl bg-white p-6 text-center">
               <p className="text-sm text-gray-600 mb-3">
@@ -189,7 +215,7 @@ const BlogViewerPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="mt-6 flex justify-between gap-2">
+            <div className="mt-6 flex justify-between">
               <button
                 onClick={goToPrevious}
                 disabled={currentPageIndex === 0}
@@ -213,13 +239,16 @@ const BlogViewerPage: React.FC = () => {
         </div>
 
         {/* RIGHT GRID */}
-        <div className="flex-1">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {blogs.map((blog) => (
+        <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-6">
+          {blogs.map((blog) => {
+            const liked =
+              user && blog.likedBy && blog.likedBy[user.uid];
+
+            return (
               <div
                 key={blog.id}
                 onClick={() => handleBlogClick(blog)}
-                className={`cursor-pointer rounded-2xl bg-white shadow-md border transition-all ${
+                className={`cursor-pointer rounded-2xl bg-white shadow-md border transition ${
                   selectedBlogId === blog.id
                     ? "ring-2 ring-[#0099ff]"
                     : "hover:shadow-lg"
@@ -242,10 +271,13 @@ const BlogViewerPage: React.FC = () => {
 
                   <div className="relative border-t mt-3 pt-3 text-gray-500">
                     <div
-                      onClick={(e) => likeBlog(e, blog)}
-                      className="absolute left-0 top-3 flex gap-1 hover:text-red-500"
+                      onClick={(e) => toggleLike(e, blog)}
+                      className={`absolute left-0 top-3 flex gap-1 ${
+                        liked ? "text-red-500" : "hover:text-red-500"
+                      }`}
                     >
-                      <Heart size={16} /> {blog.likes}
+                      <Heart size={16} fill={liked ? "red" : "none"} />
+                      {blog.likes}
                     </div>
 
                     <div className="flex justify-center gap-1">
@@ -261,8 +293,8 @@ const BlogViewerPage: React.FC = () => {
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+            );
+          })}
         </div>
 
       </div>
