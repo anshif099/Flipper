@@ -5,6 +5,7 @@ import {
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithPopup,
+  sendPasswordResetEmail,
 } from "firebase/auth";
 import { ref, set } from "firebase/database";
 import { auth, db } from "@/firebase";
@@ -28,14 +29,18 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, mode }) => {
     company: "",
   });
 
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
   useEffect(() => {
     if (mode) setCurrentMode(mode);
   }, [mode]);
 
-  // ✅ FIXED INPUT HANDLER
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+    setError("");
+    setSuccess("");
   };
 
   // 🔐 LOGIN
@@ -43,15 +48,15 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, mode }) => {
     try {
       await signInWithEmailAndPassword(auth, form.email, form.password);
       onClose?.();
-    } catch (err: any) {
-      alert(err.message);
+    } catch {
+      setError("Invalid email or password");
     }
   };
 
   // 📝 REGISTER
   const handleRegister = async () => {
     if (form.password !== form.repeatPassword) {
-      alert("Passwords do not match");
+      setError("Passwords do not match");
       return;
     }
 
@@ -74,7 +79,22 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, mode }) => {
 
       onClose?.();
     } catch (err: any) {
-      alert(err.message);
+      setError(err.message);
+    }
+  };
+
+  // 🔁 FORGOT PASSWORD (EMAIL RESET)
+  const handleForgotPassword = async () => {
+    if (!form.email) {
+      setError("Please enter your email first");
+      return;
+    }
+
+    try {
+      await sendPasswordResetEmail(auth, form.email);
+      setSuccess("Password reset link sent to your email");
+    } catch (err: any) {
+      setError(err.message);
     }
   };
 
@@ -95,7 +115,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, mode }) => {
 
       onClose?.();
     } catch (err: any) {
-      alert(err.message);
+      setError(err.message);
     }
   };
 
@@ -112,6 +132,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, mode }) => {
             <X size={20} />
           </button>
         </div>
+
+        {error && (
+          <p className="mb-2 text-center text-sm text-red-500">{error}</p>
+        )}
+        {success && (
+          <p className="mb-2 text-center text-sm text-green-600">{success}</p>
+        )}
 
         {/* Google */}
         <button
@@ -156,6 +183,14 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, mode }) => {
               className="w-full rounded-md bg-blue-500 py-2 text-white"
             >
               Log In
+            </button>
+
+            {/* Forgot password */}
+            <button
+              onClick={handleForgotPassword}
+              className="w-full text-xs text-blue-500"
+            >
+              Forgot password?
             </button>
           </div>
         ) : (
